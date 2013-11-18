@@ -1,6 +1,5 @@
 import sys
-sys.path.insert(0,"./libs")
-import lexer
+sys.path.insert(0,"./libs/ply")
 
 tokens = (
     'NAME','NUMBER',
