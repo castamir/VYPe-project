@@ -1,6 +1,23 @@
 import sys
-
 sys.path.insert(0, "./libs")
+
+
+scope = [[]]
+currentScope = scope[0]
+
+class Symbol:
+    def __init__(self, name, type):
+        self.name = name
+        self.type = type
+
+def push_scope():
+    global currentScope
+    currentScope = []
+    scope.append(currentScope)
+
+def pop_scope():
+    global currentScope
+    currentScope = scope.pop()
 
 # Reserved words
 tokens = [
@@ -53,8 +70,11 @@ t_PERIOD           = r'\.'
 t_SEMI             = r';'
 t_COLON            = r':'
 
-# Identifiers TODO - reserved strings and keywords
-t_ID = r'[A-Za-z_][A-Za-z0-9_]*'
+# Identifiers
+def t_ID(t):
+    r'[A-Za-z_][A-Za-z0-9_]*'
+    # TODO test if symbol is defined
+    return t
 
 # Integer literal
 def t_INTEGER(t):

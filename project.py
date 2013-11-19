@@ -11,9 +11,14 @@ tokens = lexer.tokens
 # Parsing rules
 
 precedence = (
+    ('left', '||'),
+    ('left', '&&'),
+    ('left', '==', '!='),
+    ('left', '<', '<=', '>', '>='),
     ('left', '+', '-'),
-    ('left', '*', '/'),
-    ('right', 'UMINUS'),
+    ('left', '*', '/', '%'),
+    ('left', '!'),
+    ('right', '()'),
 )
 
 # dictionary of names
