@@ -18,6 +18,7 @@ precedence = (
     ('left', '+', '-'),
     ('left', '*', '/', '%'),
     ('left', '!'),
+    ('right', 'UMINUS'),
     ('right', '()'),
 )
 
@@ -83,7 +84,7 @@ def p_error(p):
 
 import ply.yacc as yacc
 
-yacc.yacc(debug=True)
+yacc.yacc()
 
 while 1:
     try:
