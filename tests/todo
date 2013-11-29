@@ -1,0 +1,7 @@
+test existence funkce main a jejiho spravneho nastaveni (typ int, parametry void)
+
+test deklaraci a definici funkci
+
+test redeklarace promennych - v ramci zanoreneho bloku nebo chybne v ramci stejneho bloku
+
+rozsireni INITVAR - inicializace promenne pri deklaraci

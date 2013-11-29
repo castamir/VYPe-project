@@ -5,9 +5,9 @@ _tabversion = '3.2'
 
 _lr_method = 'LALR'
 
-_lr_signature = '\x91\x95\xa5\xf7\xe0^bz\xc0\xf4\x04\xf9Z\xebA\xba'
+_lr_signature = '\x88\x81%\x85<\xf6\x1fb)s_\x8d\xe3l\xe8\x00'
     
-_lr_action_items = {'NAME':([0,2,5,7,11,12,13,14,],[1,8,8,8,8,8,8,8,]),')':([3,8,9,10,16,17,18,19,20,],[-9,-10,-7,16,-8,-4,-3,-5,-6,]),'(':([0,2,5,7,11,12,13,14,],[5,5,5,5,5,5,5,5,]),'+':([1,3,6,8,9,10,15,16,17,18,19,20,],[-10,-9,12,-10,-7,12,12,-8,-4,-3,-5,-6,]),'*':([1,3,6,8,9,10,15,16,17,18,19,20,],[-10,-9,13,-10,-7,13,13,-8,13,13,-5,-6,]),'-':([0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,],[2,-10,2,-9,2,11,2,-10,-7,11,2,2,2,2,11,-8,-4,-3,-5,-6,]),'NUMBER':([0,2,5,7,11,12,13,14,],[3,3,3,3,3,3,3,3,]),'/':([1,3,6,8,9,10,15,16,17,18,19,20,],[-10,-9,14,-10,-7,14,14,-8,14,14,-5,-6,]),'=':([1,],[7,]),'$end':([1,3,4,6,8,9,15,16,17,18,19,20,],[-10,-9,0,-2,-10,-7,-1,-8,-4,-3,-5,-6,]),}
+_lr_action_items = {'STRING':([0,4,5,7,8,12,],[1,1,-2,-3,-1,-4,]),'SEMI':([9,10,13,],[12,-9,-8,]),'INT':([0,4,5,7,8,12,],[2,2,-2,-3,-1,-4,]),'CHAR':([0,4,5,7,8,12,],[3,3,-2,-3,-1,-4,]),'COMMA':([9,10,13,],[11,-9,-8,]),'ID':([1,2,3,6,11,],[-7,-5,-6,10,13,]),'$end':([4,5,7,8,12,],[0,-2,-3,-1,-4,]),}
 
 _lr_action = { }
 for _k, _v in _lr_action_items.items():
@@ -16,7 +16,7 @@ for _k, _v in _lr_action_items.items():
       _lr_action[_x][_k] = _y
 del _lr_action_items
 
-_lr_goto_items = {'expression':([0,2,5,7,11,12,13,14,],[6,9,10,15,17,18,19,20,]),'statement':([0,],[4,]),}
+_lr_goto_items = {'id_list':([6,],[9,]),'program':([0,],[4,]),'type':([0,4,],[6,6,]),'variable_declaration':([0,4,],[7,7,]),'global_statement':([0,4,],[5,8,]),}
 
 _lr_goto = { }
 for _k, _v in _lr_goto_items.items():
@@ -25,15 +25,14 @@ for _k, _v in _lr_goto_items.items():
        _lr_goto[_x][_k] = _y
 del _lr_goto_items
 _lr_productions = [
-  ("S' -> statement","S'",1,None,None,None),
-  ('statement -> NAME = expression','statement',3,'p_statement_assign','C:/wamp/wamp/www/vype/project.py',24),
-  ('statement -> expression','statement',1,'p_statement_expr','C:/wamp/wamp/www/vype/project.py',29),
-  ('expression -> expression + expression','expression',3,'p_expression_binop','C:/wamp/wamp/www/vype/project.py',34),
-  ('expression -> expression - expression','expression',3,'p_expression_binop','C:/wamp/wamp/www/vype/project.py',35),
-  ('expression -> expression * expression','expression',3,'p_expression_binop','C:/wamp/wamp/www/vype/project.py',36),
-  ('expression -> expression / expression','expression',3,'p_expression_binop','C:/wamp/wamp/www/vype/project.py',37),
-  ('expression -> - expression','expression',2,'p_expression_uminus','C:/wamp/wamp/www/vype/project.py',49),
-  ('expression -> ( expression )','expression',3,'p_expression_group','C:/wamp/wamp/www/vype/project.py',54),
-  ('expression -> NUMBER','expression',1,'p_expression_number','C:/wamp/wamp/www/vype/project.py',59),
-  ('expression -> NAME','expression',1,'p_expression_name','C:/wamp/wamp/www/vype/project.py',64),
+  ("S' -> program","S'",1,None,None,None),
+  ('program -> program global_statement','program',2,'p_program','C:/wamp/wamp/www/vype/vypeparser.py',102),
+  ('program -> global_statement','program',1,'p_program','C:/wamp/wamp/www/vype/vypeparser.py',103),
+  ('global_statement -> variable_declaration','global_statement',1,'p_global_statement','C:/wamp/wamp/www/vype/vypeparser.py',116),
+  ('variable_declaration -> type id_list SEMI','variable_declaration',3,'p_variable_declaration','C:/wamp/wamp/www/vype/vypeparser.py',123),
+  ('type -> INT','type',1,'p_type','C:/wamp/wamp/www/vype/vypeparser.py',136),
+  ('type -> CHAR','type',1,'p_type','C:/wamp/wamp/www/vype/vypeparser.py',137),
+  ('type -> STRING','type',1,'p_type','C:/wamp/wamp/www/vype/vypeparser.py',138),
+  ('id_list -> id_list COMMA ID','id_list',3,'p_id_list','C:/wamp/wamp/www/vype/vypeparser.py',144),
+  ('id_list -> ID','id_list',1,'p_id_list','C:/wamp/wamp/www/vype/vypeparser.py',145),
 ]

@@ -1,395 +1,252 @@
 Created by PLY version 3.4 (http://www.dabeaz.com/ply)
 
+Unused terminals:
+
+    SHORT
+    RETURN
+    VOID
+    NE
+    UMINUS
+    WHILE
+    COLON
+    TERNARY
+    MINUS
+    CCHAR
+    LE
+    RPAREN
+    UNSIGNED
+    LT
+    PLUS
+    PERIOD
+    FUNCTION
+    GT
+    MODULO
+    DIVIDE
+    FOR
+    CSTRING
+    EQUALS
+    RBRACE
+    ELSE
+    GE
+    LPAREN
+    TIMES
+    EQ
+    IF
+    AND
+    LBRACE
+    BREAK
+    CONTINUE
+    NOT
+    CINT
+    OR
+
 Grammar
 
-Rule 0     S' -> statement
-Rule 1     statement -> NAME = expression
-Rule 2     statement -> expression
-Rule 3     expression -> expression + expression
-Rule 4     expression -> expression - expression
-Rule 5     expression -> expression * expression
-Rule 6     expression -> expression / expression
-Rule 7     expression -> - expression
-Rule 8     expression -> ( expression )
-Rule 9     expression -> NUMBER
-Rule 10    expression -> NAME
+Rule 0     S' -> program
+Rule 1     program -> program global_statement
+Rule 2     program -> global_statement
+Rule 3     global_statement -> variable_declaration
+Rule 4     variable_declaration -> type id_list SEMI
+Rule 5     type -> INT
+Rule 6     type -> CHAR
+Rule 7     type -> STRING
+Rule 8     id_list -> id_list COMMA ID
+Rule 9     id_list -> ID
 
 Terminals, with rules where they appear
 
-(                    : 8
-)                    : 8
-*                    : 5
-+                    : 3
--                    : 4 7
-/                    : 6
-=                    : 1
-NAME                 : 1 10
-NUMBER               : 9
+AND                  : 
+BREAK                : 
+CCHAR                : 
+CHAR                 : 6
+CINT                 : 
+COLON                : 
+COMMA                : 8
+CONTINUE             : 
+CSTRING              : 
+DIVIDE               : 
+ELSE                 : 
+EQ                   : 
+EQUALS               : 
+FOR                  : 
+FUNCTION             : 
+GE                   : 
+GT                   : 
+ID                   : 8 9
+IF                   : 
+INT                  : 5
+LBRACE               : 
+LE                   : 
+LPAREN               : 
+LT                   : 
+MINUS                : 
+MODULO               : 
+NE                   : 
+NOT                  : 
+OR                   : 
+PERIOD               : 
+PLUS                 : 
+RBRACE               : 
+RETURN               : 
+RPAREN               : 
+SEMI                 : 4
+SHORT                : 
+STRING               : 7
+TERNARY              : 
+TIMES                : 
+UMINUS               : 
+UNSIGNED             : 
+VOID                 : 
+WHILE                : 
 error                : 
 
 Nonterminals, with rules where they appear
 
-expression           : 1 2 3 3 4 4 5 5 6 6 7 8
-statement            : 0
+global_statement     : 1 2
+id_list              : 4 8
+program              : 1 0
+type                 : 4
+variable_declaration : 3
 
 Parsing method: LALR
 
 state 0
 
-    (0) S' -> . statement
-    (1) statement -> . NAME = expression
-    (2) statement -> . expression
-    (3) expression -> . expression + expression
-    (4) expression -> . expression - expression
-    (5) expression -> . expression * expression
-    (6) expression -> . expression / expression
-    (7) expression -> . - expression
-    (8) expression -> . ( expression )
-    (9) expression -> . NUMBER
-    (10) expression -> . NAME
+    (0) S' -> . program
+    (1) program -> . program global_statement
+    (2) program -> . global_statement
+    (3) global_statement -> . variable_declaration
+    (4) variable_declaration -> . type id_list SEMI
+    (5) type -> . INT
+    (6) type -> . CHAR
+    (7) type -> . STRING
 
-    NAME            shift and go to state 1
-    -               shift and go to state 2
-    (               shift and go to state 5
-    NUMBER          shift and go to state 3
+    INT             shift and go to state 2
+    CHAR            shift and go to state 3
+    STRING          shift and go to state 1
 
-    expression                     shift and go to state 6
-    statement                      shift and go to state 4
+    program                        shift and go to state 4
+    type                           shift and go to state 6
+    variable_declaration           shift and go to state 7
+    global_statement               shift and go to state 5
 
 state 1
 
-    (1) statement -> NAME . = expression
-    (10) expression -> NAME .
+    (7) type -> STRING .
 
-    =               shift and go to state 7
-    +               reduce using rule 10 (expression -> NAME .)
-    -               reduce using rule 10 (expression -> NAME .)
-    *               reduce using rule 10 (expression -> NAME .)
-    /               reduce using rule 10 (expression -> NAME .)
-    $end            reduce using rule 10 (expression -> NAME .)
+    ID              reduce using rule 7 (type -> STRING .)
 
 
 state 2
 
-    (7) expression -> - . expression
-    (3) expression -> . expression + expression
-    (4) expression -> . expression - expression
-    (5) expression -> . expression * expression
-    (6) expression -> . expression / expression
-    (7) expression -> . - expression
-    (8) expression -> . ( expression )
-    (9) expression -> . NUMBER
-    (10) expression -> . NAME
+    (5) type -> INT .
 
-    -               shift and go to state 2
-    (               shift and go to state 5
-    NUMBER          shift and go to state 3
-    NAME            shift and go to state 8
+    ID              reduce using rule 5 (type -> INT .)
 
-    expression                     shift and go to state 9
 
 state 3
 
-    (9) expression -> NUMBER .
+    (6) type -> CHAR .
 
-    +               reduce using rule 9 (expression -> NUMBER .)
-    -               reduce using rule 9 (expression -> NUMBER .)
-    *               reduce using rule 9 (expression -> NUMBER .)
-    /               reduce using rule 9 (expression -> NUMBER .)
-    $end            reduce using rule 9 (expression -> NUMBER .)
-    )               reduce using rule 9 (expression -> NUMBER .)
+    ID              reduce using rule 6 (type -> CHAR .)
 
 
 state 4
 
-    (0) S' -> statement .
+    (0) S' -> program .
+    (1) program -> program . global_statement
+    (3) global_statement -> . variable_declaration
+    (4) variable_declaration -> . type id_list SEMI
+    (5) type -> . INT
+    (6) type -> . CHAR
+    (7) type -> . STRING
 
+    INT             shift and go to state 2
+    CHAR            shift and go to state 3
+    STRING          shift and go to state 1
 
+    type                           shift and go to state 6
+    variable_declaration           shift and go to state 7
+    global_statement               shift and go to state 8
 
 state 5
 
-    (8) expression -> ( . expression )
-    (3) expression -> . expression + expression
-    (4) expression -> . expression - expression
-    (5) expression -> . expression * expression
-    (6) expression -> . expression / expression
-    (7) expression -> . - expression
-    (8) expression -> . ( expression )
-    (9) expression -> . NUMBER
-    (10) expression -> . NAME
+    (2) program -> global_statement .
 
-    -               shift and go to state 2
-    (               shift and go to state 5
-    NUMBER          shift and go to state 3
-    NAME            shift and go to state 8
+    INT             reduce using rule 2 (program -> global_statement .)
+    CHAR            reduce using rule 2 (program -> global_statement .)
+    STRING          reduce using rule 2 (program -> global_statement .)
+    $end            reduce using rule 2 (program -> global_statement .)
 
-    expression                     shift and go to state 10
 
 state 6
 
-    (2) statement -> expression .
-    (3) expression -> expression . + expression
-    (4) expression -> expression . - expression
-    (5) expression -> expression . * expression
-    (6) expression -> expression . / expression
+    (4) variable_declaration -> type . id_list SEMI
+    (8) id_list -> . id_list COMMA ID
+    (9) id_list -> . ID
 
-    $end            reduce using rule 2 (statement -> expression .)
-    +               shift and go to state 12
-    -               shift and go to state 11
-    *               shift and go to state 13
-    /               shift and go to state 14
+    ID              shift and go to state 10
 
+    id_list                        shift and go to state 9
 
 state 7
 
-    (1) statement -> NAME = . expression
-    (3) expression -> . expression + expression
-    (4) expression -> . expression - expression
-    (5) expression -> . expression * expression
-    (6) expression -> . expression / expression
-    (7) expression -> . - expression
-    (8) expression -> . ( expression )
-    (9) expression -> . NUMBER
-    (10) expression -> . NAME
+    (3) global_statement -> variable_declaration .
 
-    -               shift and go to state 2
-    (               shift and go to state 5
-    NUMBER          shift and go to state 3
-    NAME            shift and go to state 8
+    INT             reduce using rule 3 (global_statement -> variable_declaration .)
+    CHAR            reduce using rule 3 (global_statement -> variable_declaration .)
+    STRING          reduce using rule 3 (global_statement -> variable_declaration .)
+    $end            reduce using rule 3 (global_statement -> variable_declaration .)
 
-    expression                     shift and go to state 15
 
 state 8
 
-    (10) expression -> NAME .
+    (1) program -> program global_statement .
 
-    +               reduce using rule 10 (expression -> NAME .)
-    -               reduce using rule 10 (expression -> NAME .)
-    *               reduce using rule 10 (expression -> NAME .)
-    /               reduce using rule 10 (expression -> NAME .)
-    $end            reduce using rule 10 (expression -> NAME .)
-    )               reduce using rule 10 (expression -> NAME .)
+    INT             reduce using rule 1 (program -> program global_statement .)
+    CHAR            reduce using rule 1 (program -> program global_statement .)
+    STRING          reduce using rule 1 (program -> program global_statement .)
+    $end            reduce using rule 1 (program -> program global_statement .)
 
 
 state 9
 
-    (7) expression -> - expression .
-    (3) expression -> expression . + expression
-    (4) expression -> expression . - expression
-    (5) expression -> expression . * expression
-    (6) expression -> expression . / expression
+    (4) variable_declaration -> type id_list . SEMI
+    (8) id_list -> id_list . COMMA ID
 
-    +               reduce using rule 7 (expression -> - expression .)
-    -               reduce using rule 7 (expression -> - expression .)
-    *               reduce using rule 7 (expression -> - expression .)
-    /               reduce using rule 7 (expression -> - expression .)
-    $end            reduce using rule 7 (expression -> - expression .)
-    )               reduce using rule 7 (expression -> - expression .)
-
-  ! +               [ shift and go to state 12 ]
-  ! -               [ shift and go to state 11 ]
-  ! *               [ shift and go to state 13 ]
-  ! /               [ shift and go to state 14 ]
+    SEMI            shift and go to state 12
+    COMMA           shift and go to state 11
 
 
 state 10
 
-    (8) expression -> ( expression . )
-    (3) expression -> expression . + expression
-    (4) expression -> expression . - expression
-    (5) expression -> expression . * expression
-    (6) expression -> expression . / expression
+    (9) id_list -> ID .
 
-    )               shift and go to state 16
-    +               shift and go to state 12
-    -               shift and go to state 11
-    *               shift and go to state 13
-    /               shift and go to state 14
+    SEMI            reduce using rule 9 (id_list -> ID .)
+    COMMA           reduce using rule 9 (id_list -> ID .)
 
 
 state 11
 
-    (4) expression -> expression - . expression
-    (3) expression -> . expression + expression
-    (4) expression -> . expression - expression
-    (5) expression -> . expression * expression
-    (6) expression -> . expression / expression
-    (7) expression -> . - expression
-    (8) expression -> . ( expression )
-    (9) expression -> . NUMBER
-    (10) expression -> . NAME
+    (8) id_list -> id_list COMMA . ID
 
-    -               shift and go to state 2
-    (               shift and go to state 5
-    NUMBER          shift and go to state 3
-    NAME            shift and go to state 8
+    ID              shift and go to state 13
 
-    expression                     shift and go to state 17
 
 state 12
 
-    (3) expression -> expression + . expression
-    (3) expression -> . expression + expression
-    (4) expression -> . expression - expression
-    (5) expression -> . expression * expression
-    (6) expression -> . expression / expression
-    (7) expression -> . - expression
-    (8) expression -> . ( expression )
-    (9) expression -> . NUMBER
-    (10) expression -> . NAME
+    (4) variable_declaration -> type id_list SEMI .
 
-    -               shift and go to state 2
-    (               shift and go to state 5
-    NUMBER          shift and go to state 3
-    NAME            shift and go to state 8
+    INT             reduce using rule 4 (variable_declaration -> type id_list SEMI .)
+    CHAR            reduce using rule 4 (variable_declaration -> type id_list SEMI .)
+    STRING          reduce using rule 4 (variable_declaration -> type id_list SEMI .)
+    $end            reduce using rule 4 (variable_declaration -> type id_list SEMI .)
 
-    expression                     shift and go to state 18
 
 state 13
 
-    (5) expression -> expression * . expression
-    (3) expression -> . expression + expression
-    (4) expression -> . expression - expression
-    (5) expression -> . expression * expression
-    (6) expression -> . expression / expression
-    (7) expression -> . - expression
-    (8) expression -> . ( expression )
-    (9) expression -> . NUMBER
-    (10) expression -> . NAME
+    (8) id_list -> id_list COMMA ID .
 
-    -               shift and go to state 2
-    (               shift and go to state 5
-    NUMBER          shift and go to state 3
-    NAME            shift and go to state 8
-
-    expression                     shift and go to state 19
-
-state 14
-
-    (6) expression -> expression / . expression
-    (3) expression -> . expression + expression
-    (4) expression -> . expression - expression
-    (5) expression -> . expression * expression
-    (6) expression -> . expression / expression
-    (7) expression -> . - expression
-    (8) expression -> . ( expression )
-    (9) expression -> . NUMBER
-    (10) expression -> . NAME
-
-    -               shift and go to state 2
-    (               shift and go to state 5
-    NUMBER          shift and go to state 3
-    NAME            shift and go to state 8
-
-    expression                     shift and go to state 20
-
-state 15
-
-    (1) statement -> NAME = expression .
-    (3) expression -> expression . + expression
-    (4) expression -> expression . - expression
-    (5) expression -> expression . * expression
-    (6) expression -> expression . / expression
-
-    $end            reduce using rule 1 (statement -> NAME = expression .)
-    +               shift and go to state 12
-    -               shift and go to state 11
-    *               shift and go to state 13
-    /               shift and go to state 14
-
-
-state 16
-
-    (8) expression -> ( expression ) .
-
-    +               reduce using rule 8 (expression -> ( expression ) .)
-    -               reduce using rule 8 (expression -> ( expression ) .)
-    *               reduce using rule 8 (expression -> ( expression ) .)
-    /               reduce using rule 8 (expression -> ( expression ) .)
-    $end            reduce using rule 8 (expression -> ( expression ) .)
-    )               reduce using rule 8 (expression -> ( expression ) .)
-
-
-state 17
-
-    (4) expression -> expression - expression .
-    (3) expression -> expression . + expression
-    (4) expression -> expression . - expression
-    (5) expression -> expression . * expression
-    (6) expression -> expression . / expression
-
-    +               reduce using rule 4 (expression -> expression - expression .)
-    -               reduce using rule 4 (expression -> expression - expression .)
-    $end            reduce using rule 4 (expression -> expression - expression .)
-    )               reduce using rule 4 (expression -> expression - expression .)
-    *               shift and go to state 13
-    /               shift and go to state 14
-
-  ! *               [ reduce using rule 4 (expression -> expression - expression .) ]
-  ! /               [ reduce using rule 4 (expression -> expression - expression .) ]
-  ! +               [ shift and go to state 12 ]
-  ! -               [ shift and go to state 11 ]
-
-
-state 18
-
-    (3) expression -> expression + expression .
-    (3) expression -> expression . + expression
-    (4) expression -> expression . - expression
-    (5) expression -> expression . * expression
-    (6) expression -> expression . / expression
-
-    +               reduce using rule 3 (expression -> expression + expression .)
-    -               reduce using rule 3 (expression -> expression + expression .)
-    $end            reduce using rule 3 (expression -> expression + expression .)
-    )               reduce using rule 3 (expression -> expression + expression .)
-    *               shift and go to state 13
-    /               shift and go to state 14
-
-  ! *               [ reduce using rule 3 (expression -> expression + expression .) ]
-  ! /               [ reduce using rule 3 (expression -> expression + expression .) ]
-  ! +               [ shift and go to state 12 ]
-  ! -               [ shift and go to state 11 ]
-
-
-state 19
-
-    (5) expression -> expression * expression .
-    (3) expression -> expression . + expression
-    (4) expression -> expression . - expression
-    (5) expression -> expression . * expression
-    (6) expression -> expression . / expression
-
-    +               reduce using rule 5 (expression -> expression * expression .)
-    -               reduce using rule 5 (expression -> expression * expression .)
-    *               reduce using rule 5 (expression -> expression * expression .)
-    /               reduce using rule 5 (expression -> expression * expression .)
-    $end            reduce using rule 5 (expression -> expression * expression .)
-    )               reduce using rule 5 (expression -> expression * expression .)
-
-  ! +               [ shift and go to state 12 ]
-  ! -               [ shift and go to state 11 ]
-  ! *               [ shift and go to state 13 ]
-  ! /               [ shift and go to state 14 ]
-
-
-state 20
-
-    (6) expression -> expression / expression .
-    (3) expression -> expression . + expression
-    (4) expression -> expression . - expression
-    (5) expression -> expression . * expression
-    (6) expression -> expression . / expression
-
-    +               reduce using rule 6 (expression -> expression / expression .)
-    -               reduce using rule 6 (expression -> expression / expression .)
-    *               reduce using rule 6 (expression -> expression / expression .)
-    /               reduce using rule 6 (expression -> expression / expression .)
-    $end            reduce using rule 6 (expression -> expression / expression .)
-    )               reduce using rule 6 (expression -> expression / expression .)
-
-  ! +               [ shift and go to state 12 ]
-  ! -               [ shift and go to state 11 ]
-  ! *               [ shift and go to state 13 ]
-  ! /               [ shift and go to state 14 ]
+    SEMI            reduce using rule 8 (id_list -> id_list COMMA ID .)
+    COMMA           reduce using rule 8 (id_list -> id_list COMMA ID .)
 

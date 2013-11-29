@@ -7,11 +7,11 @@ tokens = [
     'CHAR', 'ELSE', 'IF', 'INT', 'RETURN', 'STRING', 'VOID',
     'WHILE', 'BREAK', 'CONTINUE', 'FOR', 'SHORT', 'UNSIGNED',
 
-    # Literals (identifier, indentifier type, integer constant, string constant, char const)
-    'ID', 'TYPEID', 'CINT', 'CSTRING', 'CCHAR',
+    # Literals (identifier, integer constant, string constant, char const)
+    'ID', 'CINT', 'CSTRING', 'CCHAR',
 
     # Operators (+, -, *, /, %, ||, &&, !, <, <=, >, >=, ==, !=)
-    'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'MODULO',
+    'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'MODULO', 'UMINUS', 'FUNCTION',
     'OR', 'AND', 'NOT',
     'LT', 'LE', 'GT', 'GE', 'EQ', 'NE',
 
@@ -121,8 +121,10 @@ def t_newline(t):
     t.lexer.lineno += t.value.count("\n")
 
 def t_error(t):
-    print("Illegal character '%s'" % t.value[0])
-    t.lexer.skip(1)
+    print >> sys.stderr, "Illegal character '%s' on line %d" % (t.value[0], t.lineno)
+    #t.lexer.skip(1)
+    return None
+
 
 # Build the lexer
 import ply.lex as lex
