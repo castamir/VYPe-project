@@ -5,9 +5,9 @@ _tabversion = '3.2'
 
 _lr_method = 'LALR'
 
-_lr_signature = '\x88\x81%\x85<\xf6\x1fb)s_\x8d\xe3l\xe8\x00'
+_lr_signature = '}>%8=\xb3T\x9f]\x08\xd0\xe3\x07\xac\xdc+'
     
-_lr_action_items = {'STRING':([0,4,5,7,8,12,],[1,1,-2,-3,-1,-4,]),'SEMI':([9,10,13,],[12,-9,-8,]),'INT':([0,4,5,7,8,12,],[2,2,-2,-3,-1,-4,]),'CHAR':([0,4,5,7,8,12,],[3,3,-2,-3,-1,-4,]),'COMMA':([9,10,13,],[11,-9,-8,]),'ID':([1,2,3,6,11,],[-7,-5,-6,10,13,]),'$end':([4,5,7,8,12,],[0,-2,-3,-1,-4,]),}
+_lr_action_items = {'LBRACE':([3,31,],[10,-12,]),'RPAREN':([26,27,28,32,34,],[-13,-14,31,-16,-15,]),'STRING':([0,1,5,6,8,10,11,14,17,20,21,22,23,30,],[9,-4,9,-2,-3,9,-1,9,-20,-5,9,-19,-11,9,]),'SEMI':([12,13,24,25,],[20,-10,-10,-9,]),'INT':([0,1,5,6,8,10,11,14,17,20,21,22,23,30,],[2,-4,2,-2,-3,2,-1,2,-20,-5,2,-19,-11,2,]),'VOID':([21,],[26,]),'RBRACE':([10,14,15,17,18,20,22,],[-21,-18,23,-20,-17,-5,-19,]),'CHAR':([0,1,5,6,8,10,11,14,17,20,21,22,23,30,],[4,-4,4,-2,-3,4,-1,4,-20,-5,4,-19,-11,4,]),'COMMA':([12,13,24,25,27,32,34,],[19,-10,-10,-9,30,-16,-15,]),'LPAREN':([13,],[21,]),'ID':([2,4,7,9,16,19,29,33,],[-6,-7,13,-8,24,25,32,34,]),'$end':([1,5,6,8,11,20,23,],[-4,0,-2,-3,-1,-5,-11,]),}
 
 _lr_action = { }
 for _k, _v in _lr_action_items.items():
@@ -16,7 +16,7 @@ for _k, _v in _lr_action_items.items():
       _lr_action[_x][_k] = _y
 del _lr_action_items
 
-_lr_goto_items = {'id_list':([6,],[9,]),'program':([0,],[4,]),'type':([0,4,],[6,6,]),'variable_declaration':([0,4,],[7,7,]),'global_statement':([0,4,],[5,8,]),}
+_lr_goto_items = {'function_definition':([0,5,],[1,1,]),'non_empty_block':([10,],[14,]),'args':([21,],[27,]),'function_header':([0,5,],[3,3,]),'id_list':([7,16,],[12,12,]),'program':([0,],[5,]),'block':([10,],[15,]),'global_statement':([0,5,],[6,11,]),'function_args':([21,],[28,]),'type':([0,5,10,14,21,30,],[7,7,16,16,29,33,]),'variable_declaration':([0,5,10,14,],[8,8,17,22,]),'empty':([10,],[18,]),}
 
 _lr_goto = { }
 for _k, _v in _lr_goto_items.items():
@@ -26,13 +26,25 @@ for _k, _v in _lr_goto_items.items():
 del _lr_goto_items
 _lr_productions = [
   ("S' -> program","S'",1,None,None,None),
-  ('program -> program global_statement','program',2,'p_program','C:/wamp/wamp/www/vype/vypeparser.py',102),
-  ('program -> global_statement','program',1,'p_program','C:/wamp/wamp/www/vype/vypeparser.py',103),
-  ('global_statement -> variable_declaration','global_statement',1,'p_global_statement','C:/wamp/wamp/www/vype/vypeparser.py',116),
-  ('variable_declaration -> type id_list SEMI','variable_declaration',3,'p_variable_declaration','C:/wamp/wamp/www/vype/vypeparser.py',123),
-  ('type -> INT','type',1,'p_type','C:/wamp/wamp/www/vype/vypeparser.py',136),
-  ('type -> CHAR','type',1,'p_type','C:/wamp/wamp/www/vype/vypeparser.py',137),
-  ('type -> STRING','type',1,'p_type','C:/wamp/wamp/www/vype/vypeparser.py',138),
-  ('id_list -> id_list COMMA ID','id_list',3,'p_id_list','C:/wamp/wamp/www/vype/vypeparser.py',144),
-  ('id_list -> ID','id_list',1,'p_id_list','C:/wamp/wamp/www/vype/vypeparser.py',145),
+  ('program -> program global_statement','program',2,'p_program','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',102),
+  ('program -> global_statement','program',1,'p_program','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',103),
+  ('global_statement -> variable_declaration','global_statement',1,'p_global_statement','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',112),
+  ('global_statement -> function_definition','global_statement',1,'p_global_statement','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',113),
+  ('variable_declaration -> type id_list SEMI','variable_declaration',3,'p_variable_declaration','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',123),
+  ('type -> INT','type',1,'p_type','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',144),
+  ('type -> CHAR','type',1,'p_type','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',145),
+  ('type -> STRING','type',1,'p_type','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',146),
+  ('id_list -> id_list COMMA ID','id_list',3,'p_id_list','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',152),
+  ('id_list -> ID','id_list',1,'p_id_list','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',153),
+  ('function_definition -> function_header LBRACE block RBRACE','function_definition',4,'p_function_definition','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',165),
+  ('function_header -> type ID LPAREN function_args RPAREN','function_header',5,'p_function_header','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',173),
+  ('function_args -> VOID','function_args',1,'p_function_args','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',185),
+  ('function_args -> args','function_args',1,'p_function_args','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',186),
+  ('args -> args COMMA type ID','args',4,'p_args','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',195),
+  ('args -> type ID','args',2,'p_args','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',196),
+  ('block -> empty','block',1,'p_block','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',208),
+  ('block -> non_empty_block','block',1,'p_block','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',209),
+  ('non_empty_block -> non_empty_block variable_declaration','non_empty_block',2,'p_non_empty_block','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',218),
+  ('non_empty_block -> variable_declaration','non_empty_block',1,'p_non_empty_block','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',219),
+  ('empty -> <empty>','empty',0,'p_empty','C:\\wamp\\wamp\\www\\vype\\vypeparser.py',230),
 ]

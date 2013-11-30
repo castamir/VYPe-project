@@ -17,6 +17,10 @@ class Semantic:
 
     def add_function(self, type, name, args=None, infinite=False):
         self.function_table.add(name, type, args, infinite)
+        for couple in self.function_table.functions[name].args:
+            var_name, var_type = couple
+            self.symbol_table.add(var_name, var_type)
+
 
     def add_function_declaration(self, type, name, arg_types=None, infinite=False):
         self.function_table.declare(name, type, arg_types, infinite)
@@ -43,3 +47,9 @@ class Semantic:
             dict = self.function_table.declarations
             first = dict[dict.keys()[0]]
             raise DeclaredFunctionNotDefinedException("Function '%s' declared, but not defined." % first.name)
+
+    def start_function_scope(self, name):
+        self.symbol_table.push_scope()
+
+    def end_function_scope(self):
+        self.symbol_table.pop_scope()

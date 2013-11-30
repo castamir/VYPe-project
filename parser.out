@@ -4,7 +4,6 @@ Unused terminals:
 
     SHORT
     RETURN
-    VOID
     NE
     UMINUS
     WHILE
@@ -13,7 +12,6 @@ Unused terminals:
     MINUS
     CCHAR
     LE
-    RPAREN
     UNSIGNED
     LT
     PLUS
@@ -25,15 +23,12 @@ Unused terminals:
     FOR
     CSTRING
     EQUALS
-    RBRACE
     ELSE
     GE
-    LPAREN
     TIMES
     EQ
     IF
     AND
-    LBRACE
     BREAK
     CONTINUE
     NOT
@@ -46,22 +41,34 @@ Rule 0     S' -> program
 Rule 1     program -> program global_statement
 Rule 2     program -> global_statement
 Rule 3     global_statement -> variable_declaration
-Rule 4     variable_declaration -> type id_list SEMI
-Rule 5     type -> INT
-Rule 6     type -> CHAR
-Rule 7     type -> STRING
-Rule 8     id_list -> id_list COMMA ID
-Rule 9     id_list -> ID
+Rule 4     global_statement -> function_definition
+Rule 5     variable_declaration -> type id_list SEMI
+Rule 6     type -> INT
+Rule 7     type -> CHAR
+Rule 8     type -> STRING
+Rule 9     id_list -> id_list COMMA ID
+Rule 10    id_list -> ID
+Rule 11    function_definition -> function_header LBRACE block RBRACE
+Rule 12    function_header -> type ID LPAREN function_args RPAREN
+Rule 13    function_args -> VOID
+Rule 14    function_args -> args
+Rule 15    args -> args COMMA type ID
+Rule 16    args -> type ID
+Rule 17    block -> empty
+Rule 18    block -> non_empty_block
+Rule 19    non_empty_block -> non_empty_block variable_declaration
+Rule 20    non_empty_block -> variable_declaration
+Rule 21    empty -> <empty>
 
 Terminals, with rules where they appear
 
 AND                  : 
 BREAK                : 
 CCHAR                : 
-CHAR                 : 6
+CHAR                 : 7
 CINT                 : 
 COLON                : 
-COMMA                : 8
+COMMA                : 9 15
 CONTINUE             : 
 CSTRING              : 
 DIVIDE               : 
@@ -72,12 +79,12 @@ FOR                  :
 FUNCTION             : 
 GE                   : 
 GT                   : 
-ID                   : 8 9
+ID                   : 9 10 12 15 16
 IF                   : 
-INT                  : 5
-LBRACE               : 
+INT                  : 6
+LBRACE               : 11
 LE                   : 
-LPAREN               : 
+LPAREN               : 12
 LT                   : 
 MINUS                : 
 MODULO               : 
@@ -86,27 +93,34 @@ NOT                  :
 OR                   : 
 PERIOD               : 
 PLUS                 : 
-RBRACE               : 
+RBRACE               : 11
 RETURN               : 
-RPAREN               : 
-SEMI                 : 4
+RPAREN               : 12
+SEMI                 : 5
 SHORT                : 
-STRING               : 7
+STRING               : 8
 TERNARY              : 
 TIMES                : 
 UMINUS               : 
 UNSIGNED             : 
-VOID                 : 
+VOID                 : 13
 WHILE                : 
 error                : 
 
 Nonterminals, with rules where they appear
 
+args                 : 14 15
+block                : 11
+empty                : 17
+function_args        : 12
+function_definition  : 4
+function_header      : 11
 global_statement     : 1 2
-id_list              : 4 8
+id_list              : 5 9
+non_empty_block      : 18 19
 program              : 1 0
-type                 : 4
-variable_declaration : 3
+type                 : 5 12 15 16
+variable_declaration : 3 19 20
 
 Parsing method: LALR
 
@@ -116,60 +130,80 @@ state 0
     (1) program -> . program global_statement
     (2) program -> . global_statement
     (3) global_statement -> . variable_declaration
-    (4) variable_declaration -> . type id_list SEMI
-    (5) type -> . INT
-    (6) type -> . CHAR
-    (7) type -> . STRING
+    (4) global_statement -> . function_definition
+    (5) variable_declaration -> . type id_list SEMI
+    (11) function_definition -> . function_header LBRACE block RBRACE
+    (6) type -> . INT
+    (7) type -> . CHAR
+    (8) type -> . STRING
+    (12) function_header -> . type ID LPAREN function_args RPAREN
 
     INT             shift and go to state 2
-    CHAR            shift and go to state 3
-    STRING          shift and go to state 1
+    CHAR            shift and go to state 4
+    STRING          shift and go to state 9
 
-    program                        shift and go to state 4
-    type                           shift and go to state 6
-    variable_declaration           shift and go to state 7
-    global_statement               shift and go to state 5
+    function_definition            shift and go to state 1
+    function_header                shift and go to state 3
+    program                        shift and go to state 5
+    global_statement               shift and go to state 6
+    type                           shift and go to state 7
+    variable_declaration           shift and go to state 8
 
 state 1
 
-    (7) type -> STRING .
+    (4) global_statement -> function_definition .
 
-    ID              reduce using rule 7 (type -> STRING .)
+    INT             reduce using rule 4 (global_statement -> function_definition .)
+    CHAR            reduce using rule 4 (global_statement -> function_definition .)
+    STRING          reduce using rule 4 (global_statement -> function_definition .)
+    $end            reduce using rule 4 (global_statement -> function_definition .)
 
 
 state 2
 
-    (5) type -> INT .
+    (6) type -> INT .
 
-    ID              reduce using rule 5 (type -> INT .)
+    ID              reduce using rule 6 (type -> INT .)
 
 
 state 3
 
-    (6) type -> CHAR .
+    (11) function_definition -> function_header . LBRACE block RBRACE
 
-    ID              reduce using rule 6 (type -> CHAR .)
+    LBRACE          shift and go to state 10
 
 
 state 4
 
+    (7) type -> CHAR .
+
+    ID              reduce using rule 7 (type -> CHAR .)
+
+
+state 5
+
     (0) S' -> program .
     (1) program -> program . global_statement
     (3) global_statement -> . variable_declaration
-    (4) variable_declaration -> . type id_list SEMI
-    (5) type -> . INT
-    (6) type -> . CHAR
-    (7) type -> . STRING
+    (4) global_statement -> . function_definition
+    (5) variable_declaration -> . type id_list SEMI
+    (11) function_definition -> . function_header LBRACE block RBRACE
+    (6) type -> . INT
+    (7) type -> . CHAR
+    (8) type -> . STRING
+    (12) function_header -> . type ID LPAREN function_args RPAREN
 
     INT             shift and go to state 2
-    CHAR            shift and go to state 3
-    STRING          shift and go to state 1
+    CHAR            shift and go to state 4
+    STRING          shift and go to state 9
 
-    type                           shift and go to state 6
-    variable_declaration           shift and go to state 7
-    global_statement               shift and go to state 8
+    function_definition            shift and go to state 1
+    function_header                shift and go to state 3
+    global_statement               shift and go to state 11
+    type                           shift and go to state 7
+    variable_declaration           shift and go to state 8
 
-state 5
+state 6
 
     (2) program -> global_statement .
 
@@ -179,17 +213,18 @@ state 5
     $end            reduce using rule 2 (program -> global_statement .)
 
 
-state 6
-
-    (4) variable_declaration -> type . id_list SEMI
-    (8) id_list -> . id_list COMMA ID
-    (9) id_list -> . ID
-
-    ID              shift and go to state 10
-
-    id_list                        shift and go to state 9
-
 state 7
+
+    (5) variable_declaration -> type . id_list SEMI
+    (12) function_header -> type . ID LPAREN function_args RPAREN
+    (9) id_list -> . id_list COMMA ID
+    (10) id_list -> . ID
+
+    ID              shift and go to state 13
+
+    id_list                        shift and go to state 12
+
+state 8
 
     (3) global_statement -> variable_declaration .
 
@@ -199,7 +234,38 @@ state 7
     $end            reduce using rule 3 (global_statement -> variable_declaration .)
 
 
-state 8
+state 9
+
+    (8) type -> STRING .
+
+    ID              reduce using rule 8 (type -> STRING .)
+
+
+state 10
+
+    (11) function_definition -> function_header LBRACE . block RBRACE
+    (17) block -> . empty
+    (18) block -> . non_empty_block
+    (21) empty -> .
+    (19) non_empty_block -> . non_empty_block variable_declaration
+    (20) non_empty_block -> . variable_declaration
+    (5) variable_declaration -> . type id_list SEMI
+    (6) type -> . INT
+    (7) type -> . CHAR
+    (8) type -> . STRING
+
+    RBRACE          reduce using rule 21 (empty -> .)
+    INT             shift and go to state 2
+    CHAR            shift and go to state 4
+    STRING          shift and go to state 9
+
+    non_empty_block                shift and go to state 14
+    block                          shift and go to state 15
+    type                           shift and go to state 16
+    variable_declaration           shift and go to state 17
+    empty                          shift and go to state 18
+
+state 11
 
     (1) program -> program global_statement .
 
@@ -209,44 +275,219 @@ state 8
     $end            reduce using rule 1 (program -> program global_statement .)
 
 
-state 9
-
-    (4) variable_declaration -> type id_list . SEMI
-    (8) id_list -> id_list . COMMA ID
-
-    SEMI            shift and go to state 12
-    COMMA           shift and go to state 11
-
-
-state 10
-
-    (9) id_list -> ID .
-
-    SEMI            reduce using rule 9 (id_list -> ID .)
-    COMMA           reduce using rule 9 (id_list -> ID .)
-
-
-state 11
-
-    (8) id_list -> id_list COMMA . ID
-
-    ID              shift and go to state 13
-
-
 state 12
 
-    (4) variable_declaration -> type id_list SEMI .
+    (5) variable_declaration -> type id_list . SEMI
+    (9) id_list -> id_list . COMMA ID
 
-    INT             reduce using rule 4 (variable_declaration -> type id_list SEMI .)
-    CHAR            reduce using rule 4 (variable_declaration -> type id_list SEMI .)
-    STRING          reduce using rule 4 (variable_declaration -> type id_list SEMI .)
-    $end            reduce using rule 4 (variable_declaration -> type id_list SEMI .)
+    SEMI            shift and go to state 20
+    COMMA           shift and go to state 19
 
 
 state 13
 
-    (8) id_list -> id_list COMMA ID .
+    (12) function_header -> type ID . LPAREN function_args RPAREN
+    (10) id_list -> ID .
 
-    SEMI            reduce using rule 8 (id_list -> id_list COMMA ID .)
-    COMMA           reduce using rule 8 (id_list -> id_list COMMA ID .)
+    LPAREN          shift and go to state 21
+    SEMI            reduce using rule 10 (id_list -> ID .)
+    COMMA           reduce using rule 10 (id_list -> ID .)
+
+
+state 14
+
+    (18) block -> non_empty_block .
+    (19) non_empty_block -> non_empty_block . variable_declaration
+    (5) variable_declaration -> . type id_list SEMI
+    (6) type -> . INT
+    (7) type -> . CHAR
+    (8) type -> . STRING
+
+    RBRACE          reduce using rule 18 (block -> non_empty_block .)
+    INT             shift and go to state 2
+    CHAR            shift and go to state 4
+    STRING          shift and go to state 9
+
+    type                           shift and go to state 16
+    variable_declaration           shift and go to state 22
+
+state 15
+
+    (11) function_definition -> function_header LBRACE block . RBRACE
+
+    RBRACE          shift and go to state 23
+
+
+state 16
+
+    (5) variable_declaration -> type . id_list SEMI
+    (9) id_list -> . id_list COMMA ID
+    (10) id_list -> . ID
+
+    ID              shift and go to state 24
+
+    id_list                        shift and go to state 12
+
+state 17
+
+    (20) non_empty_block -> variable_declaration .
+
+    INT             reduce using rule 20 (non_empty_block -> variable_declaration .)
+    CHAR            reduce using rule 20 (non_empty_block -> variable_declaration .)
+    STRING          reduce using rule 20 (non_empty_block -> variable_declaration .)
+    RBRACE          reduce using rule 20 (non_empty_block -> variable_declaration .)
+
+
+state 18
+
+    (17) block -> empty .
+
+    RBRACE          reduce using rule 17 (block -> empty .)
+
+
+state 19
+
+    (9) id_list -> id_list COMMA . ID
+
+    ID              shift and go to state 25
+
+
+state 20
+
+    (5) variable_declaration -> type id_list SEMI .
+
+    INT             reduce using rule 5 (variable_declaration -> type id_list SEMI .)
+    CHAR            reduce using rule 5 (variable_declaration -> type id_list SEMI .)
+    STRING          reduce using rule 5 (variable_declaration -> type id_list SEMI .)
+    $end            reduce using rule 5 (variable_declaration -> type id_list SEMI .)
+    RBRACE          reduce using rule 5 (variable_declaration -> type id_list SEMI .)
+
+
+state 21
+
+    (12) function_header -> type ID LPAREN . function_args RPAREN
+    (13) function_args -> . VOID
+    (14) function_args -> . args
+    (15) args -> . args COMMA type ID
+    (16) args -> . type ID
+    (6) type -> . INT
+    (7) type -> . CHAR
+    (8) type -> . STRING
+
+    VOID            shift and go to state 26
+    INT             shift and go to state 2
+    CHAR            shift and go to state 4
+    STRING          shift and go to state 9
+
+    function_args                  shift and go to state 28
+    args                           shift and go to state 27
+    type                           shift and go to state 29
+
+state 22
+
+    (19) non_empty_block -> non_empty_block variable_declaration .
+
+    INT             reduce using rule 19 (non_empty_block -> non_empty_block variable_declaration .)
+    CHAR            reduce using rule 19 (non_empty_block -> non_empty_block variable_declaration .)
+    STRING          reduce using rule 19 (non_empty_block -> non_empty_block variable_declaration .)
+    RBRACE          reduce using rule 19 (non_empty_block -> non_empty_block variable_declaration .)
+
+
+state 23
+
+    (11) function_definition -> function_header LBRACE block RBRACE .
+
+    INT             reduce using rule 11 (function_definition -> function_header LBRACE block RBRACE .)
+    CHAR            reduce using rule 11 (function_definition -> function_header LBRACE block RBRACE .)
+    STRING          reduce using rule 11 (function_definition -> function_header LBRACE block RBRACE .)
+    $end            reduce using rule 11 (function_definition -> function_header LBRACE block RBRACE .)
+
+
+state 24
+
+    (10) id_list -> ID .
+
+    SEMI            reduce using rule 10 (id_list -> ID .)
+    COMMA           reduce using rule 10 (id_list -> ID .)
+
+
+state 25
+
+    (9) id_list -> id_list COMMA ID .
+
+    SEMI            reduce using rule 9 (id_list -> id_list COMMA ID .)
+    COMMA           reduce using rule 9 (id_list -> id_list COMMA ID .)
+
+
+state 26
+
+    (13) function_args -> VOID .
+
+    RPAREN          reduce using rule 13 (function_args -> VOID .)
+
+
+state 27
+
+    (14) function_args -> args .
+    (15) args -> args . COMMA type ID
+
+    RPAREN          reduce using rule 14 (function_args -> args .)
+    COMMA           shift and go to state 30
+
+
+state 28
+
+    (12) function_header -> type ID LPAREN function_args . RPAREN
+
+    RPAREN          shift and go to state 31
+
+
+state 29
+
+    (16) args -> type . ID
+
+    ID              shift and go to state 32
+
+
+state 30
+
+    (15) args -> args COMMA . type ID
+    (6) type -> . INT
+    (7) type -> . CHAR
+    (8) type -> . STRING
+
+    INT             shift and go to state 2
+    CHAR            shift and go to state 4
+    STRING          shift and go to state 9
+
+    type                           shift and go to state 33
+
+state 31
+
+    (12) function_header -> type ID LPAREN function_args RPAREN .
+
+    LBRACE          reduce using rule 12 (function_header -> type ID LPAREN function_args RPAREN .)
+
+
+state 32
+
+    (16) args -> type ID .
+
+    COMMA           reduce using rule 16 (args -> type ID .)
+    RPAREN          reduce using rule 16 (args -> type ID .)
+
+
+state 33
+
+    (15) args -> args COMMA type . ID
+
+    ID              shift and go to state 34
+
+
+state 34
+
+    (15) args -> args COMMA type ID .
+
+    COMMA           reduce using rule 15 (args -> args COMMA type ID .)
+    RPAREN          reduce using rule 15 (args -> args COMMA type ID .)
 

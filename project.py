@@ -4,9 +4,11 @@ with open("tests/examples/hello.world.src", "r") as myfile:
 
 p = parse(data)
 if p is not None:
-    for r in p:
-        print r
+    print p
+    #for r in p:
+    #    print r, p[r]
 else:
     exit(VYPeParser.error)
 
 print "functions:", semantic.function_table.functions
+print "symbols:", semantic.symbol_table.scope

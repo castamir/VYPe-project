@@ -1,2 +1,8 @@
 
 int identifikator;
+char znak;int cislo;
+
+int main(void) {
+    char znak;
+    string retezec;
+}
