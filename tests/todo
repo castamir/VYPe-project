@@ -1,7 +1,21 @@
-test existence funkce main a jejiho spravneho nastaveni (typ int, parametry void)
+pravidla pro deklaraci funkce
 
-test deklaraci a definici funkci
+pravidla pro definici funkce
 
-test redeklarace promennych - v ramci zanoreneho bloku nebo chybne v ramci stejneho bloku
+pravidla pro blok
 
-rozsireni INITVAR - inicializace promenne pri deklaraci
+dodelat projekt.py tak, aby zpracovaval parametry pri spusteni (pro zacatek nazev souboru a help)
+
+pravidla pro vyrazy a prirazeni
+
+pravidla pro podminky a cykly
+
+pretypovani
+
+volani funkce
+
+---
+rozsireni INITVAR - inicializace promenne pri deklaraci?
+ONLYIF?
+zkracene vyhodnocovani?
+volitelna optimalizace?
