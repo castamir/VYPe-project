@@ -1,3 +1,5 @@
+import copy
+
 class AlreadyDefinedException(Exception):
     pass
 
@@ -7,6 +9,18 @@ class NotFoundException(Exception):
 
 
 class InvalidArgumentException(Exception):
+    pass
+
+
+class TooManyArgumentsException(InvalidArgumentException):
+    pass
+
+
+class TooFewArgumentsException(InvalidArgumentException):
+    pass
+
+
+class InvalidTypeException(InvalidArgumentException):
     pass
 
 
@@ -60,19 +74,25 @@ class FunctionTable:
         return ", ".join(self.functions.keys())
 
     def add(self, name, type, args=None, infinite=False):
-        if not args:
+        if not isinstance(args, list):
             args = []
         if self.is_declared(name):
             self.validate(self.declarations[name], args)
             del self.declarations[name]
         if name in self.functions:
-            raise AlreadyDefinedException("Function '%s' is already defined" % name)
+            raise AlreadyDefinedException("Function '%s' is already defined." % name)
         types = []
         for a in args:
             types.append(a[0])
         self.functions[name] = Function(name, type, types, infinite)
         for a in args:
             self.functions[name].args.add(a[1], a[0])
+        if name == "main":
+            if len(self.functions[name].args) > 0:
+                raise InvalidArgumentException("Function main can not have arguments.")
+            if self.functions[name].type != "int":
+                raise InvalidTypeException(
+                    "Invalid argument of function main. Expected 'int', but '%s' given." % self.functions[name].type)
 
     def declare(self, name, type, arg_types=None, infinite=False):
         if self.is_declared(name) or self.is_defined(name):
@@ -81,15 +101,28 @@ class FunctionTable:
         return self.declarations[name]
 
     def is_defined(self, name):
-        return name in self.functions.keys
+        return name in self.functions
 
     def is_declared(self, name):
-        return name in self.declarations.keys
+        return name in self.declarations
 
     def validate(self, declaration, args):
-        # TODO
-        #raise InvalidArgumentException()
-        pass
+        if len(declaration.arg_types) < len(args):
+            raise TooManyArgumentsException(
+                "Too many arguments in the definition of function '%s'. Expected %d, but %d given." % (
+                    declaration.name, len(declaration.arg_types), len(args)))
+        elif len(declaration.arg_types) > len(args):
+            raise TooFewArgumentsException(
+                "Too few arguments in the definition of function '%s'. Expected %d, but %d given." % (
+                    declaration.name, len(declaration.arg_types), len(args)))
+        else:
+            given_args = copy.copy(args)
+            for expected_type in declaration.arg_types:
+                given_type, name = given_args.pop()
+                if expected_type != given_type:
+                    raise InvalidArgumentException(
+                        "Invalid argument of function '%s'. Expected '%s', but '%s' given." % (
+                        declaration.name, expected_type, given_type))
 
 
 class Function:

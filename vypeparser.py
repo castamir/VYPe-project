@@ -65,38 +65,21 @@ expr                    : expr + expr
 
 '''
 
+from Semantic import *
+import lexer
 import sys
 
 sys.path.insert(0, "./libs")
-import lexer
-from SymbolTable import *
 
 tokens = lexer.tokens
 
-
-class Semantic:
-    def __init__(self):
-        self.error = 0
-        self.symbol_table = SymbolTable()
-        self.function_table = FunctionTable()
-
-    def add_symbol(self, name, type):
-        self.symbol_table.add(name, type)
-
-    def add_function(self, type, name, args=None, infinite=False):
-        self.function_table.add(name, type, args, infinite)
-
-    def add_function_declaration(self, type, name, arg_types=None, infinite=False):
-        self.function_table.declare(name, type, arg_types, infinite)
-
-
 semantic = Semantic()
-semantic.add_function('void', 'print', infinite=True)
-semantic.add_function('string', 'read_string')
-semantic.add_function('char', 'read_char')
-semantic.add_function('int', 'read_int')
-semantic.add_function('char', 'get_at', arg_types=['string', 'int'])
-semantic.add_function('char', 'set_at', ['string', 'int', 'char'])
+semantic.add_predefined_function('void', 'print', infinite=True)
+semantic.add_predefined_function('string', 'read_string')
+semantic.add_predefined_function('char', 'read_char')
+semantic.add_predefined_function('int', 'read_int')
+semantic.add_predefined_function('char', 'get_at', ['string', 'int'])
+semantic.add_predefined_function('char', 'set_at', ['string', 'int', 'char'])
 
 # Parsing rules
 
@@ -117,10 +100,15 @@ def p_program(p):
     '''program : program global_statement
                | global_statement'''
     if len(p) == 2 and p[1]:
+        try:
+            semantic.check_main_function()
+            semantic.check_forgotten_declarations()
+        except (NotFoundException, DeclaredFunctionNotDefinedException) as e:
+            p.parser.error = 3
+            print >> sys.stderr, e.message
+            return
         p[0] = []
         p[0].append(p[1])
-        # TODO check function: int main(void)
-        # TODO check if all reclared functions are also defined
     elif len(p) == 3 and p[2]:
         p[0] = p[1]
         if not p[0]: p[0] = []

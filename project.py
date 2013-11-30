@@ -3,7 +3,6 @@ with open("tests/examples/hello.world.src", "r") as myfile:
     data = myfile.read()
 
 p = parse(data)
-#print p
 if p is not None:
     for r in p:
         print r
