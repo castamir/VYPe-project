@@ -1,2 +1,4 @@
 *.idea
 *.pyc
+parsetab.py4
+parser.out
