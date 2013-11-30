@@ -81,17 +81,13 @@ class Semantic:
         self.function_table = FunctionTable()
 
     def add_symbol(self, name, type):
-        if self.symbol_table.add(name, type) is None:
-            print >> sys.stderr, "Symbol '%s' already defined in this scope" % name
-            self.error = 3
+        self.symbol_table.add(name, type)
 
-    def add_function(self, type, name, arg_types=None, infinite=False):
-        if self.function_table.add(name, type, arg_types, infinite) is None:
-            print >> sys.stderr, "Function '%s' already defined in this scope" % name
-            self.error = 3
+    def add_function(self, type, name, args=None, infinite=False):
+        self.function_table.add(name, type, args, infinite)
 
-    def has_error(self):
-        return self.error != 0
+    def add_function_declaration(self, type, name, arg_types=None, infinite=False):
+        self.function_table.declare(name, type, arg_types, infinite)
 
 
 semantic = Semantic()
@@ -136,7 +132,7 @@ def p_global_statement(p):
     '''global_statement : variable_declaration'''
     if p[1] is None:
         return None
-    #op, type, name, value = p[1]
+        #op, type, name, value = p[1]
     #p[0] = (op, type, name, value)
     p[0] = p[1]
     return p
@@ -146,9 +142,11 @@ def p_variable_declaration(p):
     '''variable_declaration : type id_list SEMI'''
     type = p[2]
     for id in p[2]:
-        semantic.add_symbol(id, type)
-        if semantic.has_error():
+        try:
+            semantic.add_symbol(id, type)
+        except AlreadyDefinedException as e:
             p.parser.error = 3
+            print >> sys.stderr, e.message
             return
     if p[1] == "string":
         init_value = ""
