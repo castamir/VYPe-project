@@ -4,9 +4,9 @@ with open("tests/examples/hello.world.src", "r") as myfile:
 
 p = parse(data)
 if p is not None:
-    print p
-    #for r in p:
-    #    print r, p[r]
+    #print p
+    for r in p:
+        print r
 else:
     exit(VYPeParser.error)
 

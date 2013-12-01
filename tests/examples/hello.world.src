@@ -6,5 +6,10 @@ int main(void);
 
 int main(void) {
     char znak;
-    string retezec;
+    string retezec,promenna;
+}
+
+int testovaci_funkce(char arg, int cislo) {
+    char znak;
+    string retezec,promenna;
 }

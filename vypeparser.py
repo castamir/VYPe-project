@@ -229,10 +229,10 @@ def p_args(p):
     '''args : args COMMA type ID
             | type ID'''
     if len(p) == 3:
-        p[0] = [[p[1], p[2]]]
+        p[0] = [(p[1], p[2])]
     elif len(p) == 5:
         p[0] = p[1]
-        p[0].append([p[3], p[4]])
+        p[0].append((p[3], p[4]))
     return p
 
 

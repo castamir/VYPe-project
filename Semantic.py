@@ -17,9 +17,8 @@ class Semantic:
 
     def add_function(self, type, name, args=None, infinite=False):
         self.function_table.add(name, type, args, infinite)
-        for couple in self.function_table.functions[name].args:
-            var_name, var_type = couple
-            self.symbol_table.add(var_name, var_type)
+        for symbol in self.function_table.functions[name].args:
+            self.symbol_table.add(symbol.name, symbol.type)
 
     def add_function_declaration(self, type, name, arg_types=None, infinite=False):
         self.function_table.declare(name, type, arg_types, infinite)
