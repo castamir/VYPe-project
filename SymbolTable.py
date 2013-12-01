@@ -81,11 +81,9 @@ class FunctionTable:
             if f.is_void():
                 args = 'void'
             else:
-                #print name, "nevoid", f.args.is_empty()
                 args = []
-                for arg in f.args.current:
-                    #print f.args.current[arg].name, f.args.current[arg].type
-                    args.append(f.args.current[arg].type)
+                for arg in f.args:
+                    args.append(arg.type)
                 args = ", ".join(args)
             description = f.type + " " + f.name + "(" + args + ")"
             functions.append(description)
@@ -104,7 +102,7 @@ class FunctionTable:
             types.append(a[0])
         self.functions[name] = Function(name, type, types, infinite)
         for a in args:
-            self.functions[name].args.add(a[1], a[0])
+            self.functions[name].args.append(Symbol(a[1], a[0]))
         if name == "main":
             if len(self.functions[name].args) > 0:
                 raise InvalidArgumentException("Function main can not have arguments.")
@@ -158,10 +156,10 @@ class Function:
         self.arg_types = arg_types
         self.has_infinite_args = infinite
         self.void = arg_types is None and infinite is False
-        self.args = SymbolTable()
+        self.args = []
 
     def is_void(self):
-        if self.has_infinite_args or not self.args.is_empty():
+        if self.has_infinite_args or len(self.args) > 0:
             return False
         return True
 
