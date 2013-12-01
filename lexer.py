@@ -16,7 +16,7 @@ tokens = [
     'LT', 'LE', 'GT', 'GE', 'EQ', 'NE',
 
     # Assignment (=)
-    'EQUALS',
+    'ASSIGN',
 
     # Ternary operator (?)
     'TERNARY',
@@ -43,7 +43,7 @@ t_EQ               = r'=='
 t_NE               = r'!='
 
 # Assignment operators
-t_EQUALS           = r'='
+t_ASSIGN           = r'='
 
 # ?
 t_TERNARY          = r'\?'

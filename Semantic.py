@@ -5,6 +5,10 @@ class DeclaredFunctionNotDefinedException(Exception):
     pass
 
 
+class IncompatibleTypesException(Exception):
+    pass
+
+
 class Semantic:
     def __init__(self):
         self._labels = 0
@@ -12,8 +16,19 @@ class Semantic:
         self.symbol_table = SymbolTable()
         self.function_table = FunctionTable()
 
+    def get_symbol_from_command(self, commands):
+        op, op1, op2, name = commands[-1]
+        return self.get_symbol(name)
+
+    def get_symbol(self, name):
+        return self.symbol_table.get(name)
+
+    def add_temp_symbol(self, type):
+        name = self._get_new_label()
+        return self.add_symbol(name, type)
+
     def add_symbol(self, name, type):
-        self.symbol_table.add(name, type)
+        return self.symbol_table.add(name, type)
 
     def add_function(self, type, name, args=None, infinite=False):
         self.function_table.add(name, type, args, infinite)

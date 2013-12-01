@@ -9,7 +9,10 @@ int main(void) {
     string retezec,promenna;
 }
 
-int testovaci_funkce(char arg, int cislo) {
+void testovaci_funkce(char arg, int cislo) {
     char znak;
     string retezec,promenna;
+    cislo = 1;
+    cislo = 2 + 3 * 4;
+    cislo = cislo / 1;
 }

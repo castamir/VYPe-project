@@ -241,7 +241,7 @@ def p_args(p):
 ###########################
 def p_block(p):
     '''block : empty
-             | non_empty_block'''
+             | statement_list'''
     if not isinstance(p[1], list):
         p[0] = []
     else:
@@ -249,13 +249,81 @@ def p_block(p):
     return p
 
 
-def p_non_empty_block(p):
-    '''non_empty_block : non_empty_block variable_declaration
-                       | variable_declaration'''
+def p_statement_list(p):
+    '''statement_list : statement_list statement
+                       | statement'''
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 3:
         p[0] = p[1] + p[2]
+    return p
+
+
+def p_statement(p):
+    '''statement : variable_declaration
+                 | assignment'''
+    p[0] = p[1]
+    return p
+
+
+def p_assignment(p):
+    '''assignment : ID ASSIGN expr SEMI'''
+    lsymbol = semantic.get_symbol(p[1])
+    rsymbol = semantic.get_symbol_from_command(p[3])
+    if lsymbol.type != rsymbol.type:
+        raise IncompatibleTypesException(
+            "Unable to assign value of type '%s' into a variable of type '%s'." % (rsymbol.type, lsymbol.type))
+    p[0] = p[3] + [('=', rsymbol.name, None, lsymbol.name)]
+    return p
+
+
+def p_expr_arithmetic(p):
+    '''expr : expr PLUS expr
+            | expr MINUS expr
+            | expr TIMES expr
+            | expr DIVIDE expr
+            | expr MODULO expr'''
+    lsymbol = semantic.get_symbol_from_command(p[1])
+    rsymbol = semantic.get_symbol_from_command(p[3])
+    if lsymbol.type != rsymbol.type or lsymbol.type != 'int':
+        raise IncompatibleTypesException(
+            "Arithmetic operations requires int operands, '%s' and '%s' given." % (lsymbol.type, rsymbol.type))
+    result = semantic.add_temp_symbol('int')
+    p[0] = p[1] + p[3] + [(p[2], lsymbol.name, rsymbol.name, result.name)]
+    return p
+
+
+def p_expr_number(p):
+    '''expr : CINT'''
+    symbol = semantic.add_temp_symbol('int')
+    p[0] = [('TEMP', p[1], None, symbol.name)]
+    return p
+
+
+def p_expr_char(p):
+    '''expr : CCHAR'''
+    symbol = semantic.add_temp_symbol('char')
+    p[0] = [('TEMP', p[1], None, symbol.name)]
+    return p
+
+
+def p_expr_string(p):
+    '''expr : CSTRING'''
+    symbol = semantic.add_temp_symbol('string')
+    p[0] = [('TEMP', p[1], None, symbol.name)]
+    return p
+
+
+def p_expr_single_variable(p):
+    '''expr : ID'''
+    symbol = semantic.get_symbol(p[1])
+    p[0] = [('TEMP_FROM_ID', None, None, symbol.name)]
+    return p
+
+
+def p_expr_parentless(p):
+    '''expr : LPAREN expr RPAREN'''
+    p[0] = p[2]
     return p
 
 
@@ -285,7 +353,7 @@ def parse(data, debug=0):
         try:
             semantic.check_main_function()
             semantic.check_forgotten_declarations()
-        except (NotFoundException, DeclaredFunctionNotDefinedException) as e:
+        except (NotFoundException, DeclaredFunctionNotDefinedException, IncompatibleTypesException) as e:
             p.parser.error = 3
             print >> sys.stderr, e.message
             return None

@@ -46,6 +46,7 @@ class SymbolTable(list):
         if name in self.current:
             raise AlreadyDefinedException("Identifier '%s' is already defined" % name)
         self.current[name] = Symbol(name, type)
+        return self.current[name]
 
     def get(self, name):
         symbols = self.get_visible_symbols()
