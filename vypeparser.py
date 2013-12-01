@@ -261,8 +261,21 @@ def p_statement_list(p):
 
 def p_statement(p):
     '''statement : variable_declaration
-                 | assignment'''
+                 | assignment
+                 | return'''
     p[0] = p[1]
+    return p
+
+
+def p_return(p):
+    '''return : RETURN expr SEMI
+              | RETURN SEMI'''
+    if len(p) == 3:
+        p[0] = [('RETURN', None, None, None)]
+    else:
+        symbol = semantic.get_symbol_from_command(p[2])
+        p[0] = p[2] + [('RETURN', symbol.name, None, None)]
+    # TODO check semantic actions for return statement
     return p
 
 
