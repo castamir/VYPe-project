@@ -39,7 +39,8 @@ class SymbolTable(list):
         self.scope.append(self.current)
 
     def pop_scope(self):
-        self.current = self.scope.pop()
+        self.scope.pop()
+        self.current = self.scope[-1]
 
     def add(self, name, type):
         if name in self.current:
@@ -169,7 +170,10 @@ if __name__ == "__main__":
     table.add('variable1', 'string')
     print table
     table.push_scope()
+    table.add('variable1', 'int')
     table.add('vefunkci', 'int')
     table.add('vefunkci2', 'char')
+    table.add('vefunkci1', 'char')
     print table
-
+    table.pop_scope()
+    print table
