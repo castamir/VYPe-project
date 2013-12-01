@@ -10,5 +10,5 @@ if p is not None:
 else:
     exit(VYPeParser.error)
 
-print "functions:", semantic.function_table.functions
-print "symbols:", semantic.symbol_table.scope
+print "defined functions:", semantic.function_table
+print "global symbols:", semantic.symbol_table

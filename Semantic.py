@@ -21,7 +21,6 @@ class Semantic:
             var_name, var_type = couple
             self.symbol_table.add(var_name, var_type)
 
-
     def add_function_declaration(self, type, name, arg_types=None, infinite=False):
         self.function_table.declare(name, type, arg_types, infinite)
 
@@ -30,7 +29,7 @@ class Semantic:
             args = []
             for arg_type in arg_types:
                 args.append([arg_type, self._get_new_label()])
-            self.function_table.add(name, type, type, infinite)
+            self.function_table.add(name, type, args, infinite)
         else:
             self.function_table.add(name, type, None, infinite)
 

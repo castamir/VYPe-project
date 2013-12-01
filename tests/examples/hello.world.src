@@ -2,6 +2,8 @@
 int identifikator;
 char znak;int cislo;
 
+int main(void);
+
 int main(void) {
     char znak;
     string retezec;

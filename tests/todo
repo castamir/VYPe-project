@@ -1,7 +1,3 @@
-pravidla pro deklaraci funkce
-
-pravidla pro definici funkce
-
 pravidla pro blok
 
 dodelat projekt.py tak, aby zpracovaval parametry pri spusteni (pro zacatek nazev souboru a help)

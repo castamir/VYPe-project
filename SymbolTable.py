@@ -1,5 +1,6 @@
 import copy
 
+
 class AlreadyDefinedException(Exception):
     pass
 
@@ -29,6 +30,9 @@ class SymbolTable(list):
         super(SymbolTable, self).__init__()
         self.scope = [{}]
         self.current = self.scope[0]
+
+    def is_empty(self):
+        return len(self.get_visible_symbols()) == 0
 
     def push_scope(self):
         self.current = {}
@@ -71,10 +75,24 @@ class FunctionTable:
         self.functions = {}
 
     def __str__(self):
-        return ", ".join(self.functions.keys())
+        functions = []
+        for name in self.functions:
+            f = self.functions[name]
+            if f.is_void():
+                args = 'void'
+            else:
+                #print name, "nevoid", f.args.is_empty()
+                args = []
+                for arg in f.args.current:
+                    #print f.args.current[arg].name, f.args.current[arg].type
+                    args.append(f.args.current[arg].type)
+                args = ", ".join(args)
+            description = f.type + " " + f.name + "(" + args + ")"
+            functions.append(description)
+        return ", ".join(functions)
 
     def add(self, name, type, args=None, infinite=False):
-        if not isinstance(args, list):
+        if args is None:
             args = []
         if self.is_declared(name):
             self.validate(self.declarations[name], args)
@@ -107,22 +125,30 @@ class FunctionTable:
         return name in self.declarations
 
     def validate(self, declaration, args):
-        if len(declaration.arg_types) < len(args):
+        if declaration.arg_types is None:
+            declared = 0
+        else:
+            declared = len(declaration.arg_types)
+        if args is None:
+            defined = 0
+        else:
+            defined = len(args)
+        if declared < defined:
             raise TooManyArgumentsException(
                 "Too many arguments in the definition of function '%s'. Expected %d, but %d given." % (
-                    declaration.name, len(declaration.arg_types), len(args)))
-        elif len(declaration.arg_types) > len(args):
+                    declaration.name, declared, defined))
+        elif declared > defined:
             raise TooFewArgumentsException(
                 "Too few arguments in the definition of function '%s'. Expected %d, but %d given." % (
-                    declaration.name, len(declaration.arg_types), len(args)))
-        else:
+                    declaration.name, declared, defined))
+        elif defined != 0:
             given_args = copy.copy(args)
             for expected_type in declaration.arg_types:
                 given_type, name = given_args.pop()
                 if expected_type != given_type:
                     raise InvalidArgumentException(
                         "Invalid argument of function '%s'. Expected '%s', but '%s' given." % (
-                        declaration.name, expected_type, given_type))
+                            declaration.name, expected_type, given_type))
 
 
 class Function:
@@ -133,6 +159,11 @@ class Function:
         self.has_infinite_args = infinite
         self.void = arg_types is None and infinite is False
         self.args = SymbolTable()
+
+    def is_void(self):
+        if self.has_infinite_args or not self.args.is_empty():
+            return False
+        return True
 
 
 if __name__ == "__main__":

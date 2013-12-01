@@ -103,22 +103,24 @@ def p_program(p):
                | global_statement'''
     if len(p) == 2 and p[1]:
         p[0] = p[1]
-    elif len(p) == 3 and p[2]:
+    elif len(p) == 3 and p[2] is not None:
         p[0] = p[1]
         p[0] = p[0] + p[2]
 
 
 def p_global_statement(p):
     '''global_statement : variable_declaration
-                        | function_definition'''
+                        | function_definition
+                        | function_declaration'''
     if p[1] is None:
         return None
     p[0] = p[1]
     return p
 
+
 ###########################
 # variable declaration
-
+###########################
 def p_variable_declaration(p):
     '''variable_declaration : type id_list SEMI'''
     p[0] = []
@@ -160,7 +162,42 @@ def p_id_list(p):
 
 
 ###########################
+# function declaration
+###########################
+def p_function_declaration(p):
+    '''function_declaration : type ID LPAREN arg_types RPAREN SEMI
+                            | void_arg_function SEMI'''
+    if len(p) == 3:
+        type, name, args = p[1]
+    else:
+        type = p[1]
+        name = p[2]
+        args = p[4]
+    semantic.add_function_declaration(type, name, args)
+    p[0] = []
+    return p
+
+
+def p_arg_types(p):
+    '''arg_types : arg_types COMMA type
+                 | type'''
+    if len(p) == 2:
+        p[0] = [p[1]]
+    elif len(p) == 4:
+        p[0] = p[1]
+        p[0].append(p[3])
+    return p
+
+
+###########################
 # function definition
+###########################
+def p_void_arg_function(p):
+    '''void_arg_function : type ID LPAREN VOID RPAREN'''
+    p[0] = (p[1], p[2], None)
+    return p
+
+
 def p_function_definition(p):
     '''function_definition : function_header LBRACE block RBRACE'''
     p[0] = p[1] + p[3]
@@ -169,25 +206,22 @@ def p_function_definition(p):
 
 
 def p_function_header(p):
-    '''function_header : type ID LPAREN function_args RPAREN'''
-    semantic.start_function_scope(p[2])
-    semantic.add_function(p[1], p[2], p[4])
+    '''function_header : type ID LPAREN args RPAREN
+                       | void_arg_function'''
+    if len(p) == 2:
+        type, name, args = p[1]
+    else:
+        type = p[1]
+        name = p[2]
+        args = p[4]
+    semantic.start_function_scope(name)
+    semantic.add_function(type, name, args)
     p[0] = []
-    p[0].append(('FUNCTION', p[2], None, None))
-    if p[4] is not None:
-        for arg in p[4]:
+    p[0].append(('FUNCTION', name, None, None))
+    if args is not None:
+        for arg in args:
             type, name = arg
             p[0].append(('ARG', type, name, None))
-    return p
-
-
-def p_function_args(p):
-    '''function_args : VOID
-                     | args'''
-    if p[1] == "void":
-        p[0] = None
-    else:
-        p[0] = p[1]
     return p
 
 
@@ -204,6 +238,7 @@ def p_args(p):
 
 ###########################
 # block
+###########################
 def p_block(p):
     '''block : empty
              | non_empty_block'''
@@ -218,10 +253,9 @@ def p_non_empty_block(p):
     '''non_empty_block : non_empty_block variable_declaration
                        | variable_declaration'''
     if len(p) == 2:
-        p[0] = [p[1]]
-    elif len(p) == 3:
         p[0] = p[1]
-        p[0].append(p[2])
+    elif len(p) == 3:
+        p[0] = p[1] + p[2]
     return p
 
 
@@ -246,17 +280,15 @@ VYPeParser = yacc.yacc()
 def parse(data, debug=0):
     global VYPeParser
     VYPeParser.error = 0
-    global code
-    code = {0: ("BEGIN", None, None, None)}
     try:
         p = VYPeParser.parse(data, debug=debug)
-        #try:
-        #    semantic.check_main_function()
-        #    semantic.check_forgotten_declarations()
-        #except (NotFoundException, DeclaredFunctionNotDefinedException) as e:
-        #    p.parser.error = 3
-        #    print >> sys.stderr, e.message
-        #    return None
+        try:
+            semantic.check_main_function()
+            semantic.check_forgotten_declarations()
+        except (NotFoundException, DeclaredFunctionNotDefinedException) as e:
+            p.parser.error = 3
+            print >> sys.stderr, e.message
+            return None
         return p
     except lex.LexError:
         VYPeParser.error = 1
