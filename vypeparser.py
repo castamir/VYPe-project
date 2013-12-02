@@ -149,7 +149,7 @@ def p_variable_declaration(p):
             p.parser.error = 3
             print >> sys.stderr, e.message
             return
-        p[0].append(('DIM', p[1], name, init_value))
+        p[0].append(('DIM', p[1], init_value, name))
     return p
 
 
@@ -226,7 +226,13 @@ def p_function_definition(p):
             p[0] = p[0] + [('RETURN', None, None, None)]
         elif function.type == 'int':
             symbol = semantic.add_temp_symbol(function.type)
-            p[0] = p[0] + [('RETURN', symbol.name, None, None)]
+            if function.type == "string":
+                init_value = ""
+            elif function.type == "char":
+                init_value = '\0'
+            else:
+                init_value = 0
+            p[0] = p[0] + [('TEMP', function.type, init_value, symbol.name), ('RETURN', symbol.name, None, None)]
 
     semantic.end_function_scope()
     return p
@@ -344,21 +350,21 @@ def p_expr_arithmetic(p):
 def p_expr_number(p):
     '''expr : CINT'''
     symbol = semantic.add_temp_symbol('int')
-    p[0] = [('TEMP', p[1], None, symbol.name)]
+    p[0] = [('TEMP', 'int', p[1], symbol.name)]
     return p
 
 
 def p_expr_char(p):
     '''expr : CCHAR'''
     symbol = semantic.add_temp_symbol('char')
-    p[0] = [('TEMP', p[1], None, symbol.name)]
+    p[0] = [('TEMP', 'char', p[1], symbol.name)]
     return p
 
 
 def p_expr_string(p):
     '''expr : CSTRING'''
     symbol = semantic.add_temp_symbol('string')
-    p[0] = [('TEMP', p[1], None, symbol.name)]
+    p[0] = [('TEMP', 'string', p[1], symbol.name)]
     return p
 
 
