@@ -17,4 +17,7 @@ int main(void) {
 
 int testovaci_funkce(char arg, int cislo) {
     cislo = 1;
+    arg = 'c';
+    string retezec;
+    retezec = "text";
 }

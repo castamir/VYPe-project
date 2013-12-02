@@ -251,10 +251,12 @@ def p_function_header(p):
     semantic.add_function(type, name, args)
     p[0] = []
     p[0].append(('FUNCTION', name, None, None))
+    args_counter = 0
     if args is not None:
         for arg in args:
+            args_counter += 1
             type, name = arg
-            p[0].append(('ARG', type, name, None))
+            p[0].append(('ARG', type, args_counter, name))
     return p
 
 
