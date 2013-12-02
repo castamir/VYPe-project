@@ -75,12 +75,13 @@ class FunctionTable:
     def __init__(self):
         self.declarations = {}
         self.functions = {}
+        self.current = None
 
     def __str__(self):
         functions = []
         for name in self.functions:
             f = self.functions[name]
-            if f.is_void():
+            if f.has_void_args():
                 args = 'void'
             else:
                 args = []
@@ -157,10 +158,9 @@ class Function:
         self.type = type
         self.arg_types = arg_types
         self.has_infinite_args = infinite
-        self.void = arg_types is None and infinite is False
         self.args = []
 
-    def is_void(self):
+    def has_void_args(self):
         if self.has_infinite_args or len(self.args) > 0:
             return False
         return True

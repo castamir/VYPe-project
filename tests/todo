@@ -5,7 +5,7 @@ dodelat projekt.py tak, aby zpracovaval parametry pri spusteni (pro zacatek naze
 tester, jez bude spoustet project.py pro vsechny vzorove i chybne vstupy... chybove kody pozna podle nazvu slozky,
 konkretni chyby podle nazvu souboru
 
-pravidla pro vyrazy a prirazeni
+pravidla pro vyrazy
 
 pravidla pro podminky a cykly
 

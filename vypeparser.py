@@ -60,10 +60,17 @@ expr                    : expr + expr
                         | expr == expr
                         | expr != expr
                         | CINT
+                        | CCHAR
+                        | CSTRING
                         | ID
 
 
 '''
+
+
+class SyntaxErrorException(Exception):
+    pass
+
 
 from Semantic import *
 import lexer
@@ -90,7 +97,7 @@ precedence = (
     ('left', 'LT', 'LE', 'GT', 'GE'),
     ('left', 'PLUS', 'MINUS'),
     ('left', 'TIMES', 'DIVIDE', 'MODULO'),
-    ('left', 'NOT'),
+    ('right', 'NOT'),
     ('right', 'UMINUS'),
     ('right', 'FUNCTION'),
 )
@@ -101,9 +108,13 @@ code = {}
 def p_program(p):
     '''program : program global_statement
                | global_statement'''
-    if len(p) == 2 and p[1]:
+    if len(p) == 2:
+        if p[1] is None:
+            return None
         p[0] = p[1]
-    elif len(p) == 3 and p[2] is not None:
+    elif len(p) == 3:
+        if p[1] is None or p[2] is None:
+            return None
         p[0] = p[1]
         p[0] = p[0] + p[2]
 
@@ -201,6 +212,22 @@ def p_void_arg_function(p):
 def p_function_definition(p):
     '''function_definition : function_header LBRACE block RBRACE'''
     p[0] = p[1] + p[3]
+
+    if len(p) > 0:
+        last_statement = p[0][-1]
+        statement, arg2, arg3, arg4 = last_statement
+        found = statement == "RETURN"
+    else:
+        found = False
+    # function without return statement
+    if not found:
+        function = semantic.get_current_function()
+        if function.type == 'void':
+            p[0] = p[0] + [('RETURN', None, None, None)]
+        elif function.type == 'int':
+            symbol = semantic.add_temp_symbol(function.type)
+            p[0] = p[0] + [('RETURN', symbol.name, None, None)]
+
     semantic.end_function_scope()
     return p
 
@@ -271,11 +298,19 @@ def p_return(p):
     '''return : RETURN expr SEMI
               | RETURN SEMI'''
     if len(p) == 3:
+        if semantic.get_current_function().type == 'void':
+            raise InvalidArgumentException("Void functions cannot return a value.")
         p[0] = [('RETURN', None, None, None)]
     else:
         symbol = semantic.get_symbol_from_command(p[2])
+        current_function = semantic.get_current_function()
+        if current_function.type != 'void':
+            raise InvalidArgumentException("Non-void functions cannot have a non-value return statement.")
+        if current_function.type != symbol.type:
+            raise InvalidArgumentException(
+                "Invalid type of a return value. Expected '%s', but '%s' given" % (current_function.type, symbol.type))
         p[0] = p[2] + [('RETURN', symbol.name, None, None)]
-    # TODO check semantic actions for return statement
+        # TODO check semantic actions for return statement
     return p
 
 
@@ -340,6 +375,48 @@ def p_expr_parentless(p):
     return p
 
 
+def p_expr_bool(p):
+    '''expr : expr OR expr
+            | expr AND expr'''
+    lsymbol = semantic.get_symbol_from_command(p[1])
+    rsymbol = semantic.get_symbol_from_command(p[3])
+    if lsymbol.type != 'int' or rsymbol.type != 'int':
+        raise IncompatibleTypesException(
+            "Logic operations requires int operands, '%s' and '%s' given." % (lsymbol.type, rsymbol.type))
+    result = semantic.add_temp_symbol('int')
+    p[0] = p[1] + p[3] + [(p[2], lsymbol.name, rsymbol.name, result.name)]
+    return p
+
+
+def p_expr_bool_not(p):
+    '''expr : NOT expr'''
+    symbol = semantic.get_symbol_from_command(p[2])
+    if symbol.type != 'int':
+        raise IncompatibleTypesException(
+            "Logic NOT requires int operand, '%s' given." % symbol.type)
+    result = semantic.add_temp_symbol('int')
+    p[0] = p[1] + p[3] + [(p[1], symbol.name, None, result.name)]
+    return p
+
+
+def p_expr_relation(p):
+    '''expr : expr EQ expr
+            | expr NE expr
+            | expr LT expr
+            | expr LE expr
+            | expr GT expr
+            | expr GE expr'''
+    lsymbol = semantic.get_symbol_from_command(p[1])
+    rsymbol = semantic.get_symbol_from_command(p[3])
+    if lsymbol.type != rsymbol.type:
+        raise IncompatibleTypesException(
+            "Relation operations requires operands of the same type, '%s' and '%s' given." % (
+                lsymbol.type, rsymbol.type))
+    result = semantic.add_temp_symbol('int')
+    p[0] = p[1] + p[3] + [(p[2], lsymbol.name, rsymbol.name, result.name)]
+    return p
+
+
 #### empty production
 def p_empty(p):
     '''empty :'''
@@ -348,8 +425,8 @@ def p_empty(p):
 #### Catastrophic error handler
 def p_error(p):
     if not p:
-        print >> sys.stderr, "Syntax error at the end of file"
-    VYPeParser.error = 2
+        raise EOFException("Unexpected end of file.")
+    raise SyntaxErrorException("syntax error")
 
 
 import ply.yacc as yacc
@@ -363,16 +440,20 @@ def parse(data, debug=0):
     VYPeParser.error = 0
     try:
         p = VYPeParser.parse(data, debug=debug)
-        try:
-            semantic.check_main_function()
-            semantic.check_forgotten_declarations()
-        except (NotFoundException, DeclaredFunctionNotDefinedException, IncompatibleTypesException) as e:
-            p.parser.error = 3
-            print >> sys.stderr, e.message
-            return None
-        return p
-    except lex.LexError:
+        semantic.check_main_function()
+        semantic.check_forgotten_declarations()
+    except lex.LexError as e:
         VYPeParser.error = 1
+        print >> sys.stderr, e.message
         return None
+    except SyntaxErrorException as e:
+        VYPeParser.error = 2
+        print >> sys.stderr, e.message
+        return None
+    except (NotFoundException, DeclaredFunctionNotDefinedException, IncompatibleTypesException) as e:
+        VYPeParser.error = 3
+        print >> sys.stderr, e.message
+        return None
+    return p
 
 

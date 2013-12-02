@@ -1,6 +1,10 @@
 from SymbolTable import *
 
 
+class EOFException(Exception):
+    pass
+
+
 class DeclaredFunctionNotDefinedException(Exception):
     pass
 
@@ -34,6 +38,7 @@ class Semantic:
         self.function_table.add(name, type, args, infinite)
         for symbol in self.function_table.functions[name].args:
             self.symbol_table.add(symbol.name, symbol.type)
+        self.function_table.current = self.function_table.functions[name]
 
     def add_function_declaration(self, type, name, arg_types=None, infinite=False):
         self.function_table.declare(name, type, arg_types, infinite)
@@ -57,8 +62,8 @@ class Semantic:
 
     def check_forgotten_declarations(self):
         if len(self.function_table.declarations) != 0:
-            dict = self.function_table.declarations
-            first = dict[dict.keys()[0]]
+            dictionary = self.function_table.declarations
+            first = dictionary[dictionary.keys()[0]]
             raise DeclaredFunctionNotDefinedException("Function '%s' declared, but not defined." % first.name)
 
     def start_function_scope(self, name):
@@ -66,3 +71,8 @@ class Semantic:
 
     def end_function_scope(self):
         self.symbol_table.pop_scope()
+        self.function_table.current = None
+
+    def get_current_function(self):
+        return self.function_table.current
+

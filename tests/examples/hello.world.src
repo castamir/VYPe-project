@@ -8,9 +8,13 @@ int main(void) {
     cislo = 1;
     cislo = 2 + 3 * 4;
     cislo = cislo / 1;
+    cislo = 1 < 2;
+    cislo = 1 && 2;
+    cislo = 1 || 2;
+    cislo = 0 && 1 || 2;
     return;
 }
 
 int testovaci_funkce(char arg, int cislo) {
-    return 1;
+    cislo = 1;
 }
