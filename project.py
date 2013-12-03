@@ -1,5 +1,7 @@
 from vypeparser import parse, VYPeParser, semantic
-with open("tests/examples/hello.world.src", "r") as myfile:
+#with open("tests/examples/hello.world.src", "r") as myfile:
+#with open("tests/examples/simple.example.src", "r") as myfile:
+with open("tests/examples/simple.example.numbers.src", "r") as myfile:
     data = myfile.read()
 
 p = parse(data)
