@@ -1,6 +1,6 @@
 
 int identifikator;
-char znak;int cislo;
+char znak; int cislo;
 
 int main(void);
 

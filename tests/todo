@@ -1,17 +1,9 @@
-zbyvajici pravidla pro blok
-
 dodelat projekt.py tak, aby zpracovaval parametry pri spusteni (pro zacatek nazev souboru a help)
 
 tester, jez bude spoustet project.py pro vsechny vzorove i chybne vstupy... chybove kody pozna podle nazvu slozky,
 konkretni chyby podle nazvu souboru
 
-pravidla pro vyrazy
-
-pravidla pro podminky a cykly
-
-pretypovani
-
-volani funkce
+specialne vyclenit globalni promenne
 
 ---
 rozsireni INITVAR - inicializace promenne pri deklaraci?
