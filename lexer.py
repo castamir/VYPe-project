@@ -59,11 +59,17 @@ t_SEMI             = r';'
 t_COLON            = r':'
 
 # String literal
-t_CSTRING = r'\"([^\\\n]|(\\.))*?\"'
+def t_CSTRING(t):
+    r'\"([^\\\n]|(\\.))*?\"'
+    t.value = t.value[1:-1]
+    return t
 
 # Character constant 'c'
-t_CCHAR = r'\'([^\\\n]|(\\.))*?\''
-# TODO check printable or escaped charater
+def t_CCHAR(t):
+    r'\'([^\\\n]|(\\.))*?\''
+    t.value = t.value[1:-1]
+    # TODO check printable or escaped charater
+    return t
 
 # Integer literal
 def t_CINT(t):
