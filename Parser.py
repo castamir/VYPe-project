@@ -1,100 +1,35 @@
-'''
-empty :
-
-program                 : function_declaration
-                        | function_definition
-                        | var_declaration
-
-var_declaration         : type id var_list
-
-var_list                : , type var_list
-                        | empty
-
-function_declaration    : type id ( param_types ) ;
-
-param_types             : void
-                        | type param_type_list
-
-param_type_list         : , type param_type_list
-                        | empty
-
-function_definition     : type id ( params ) { block }
-
-params                  : void
-                        | param_item param_list
-
-param_list              : , param_item param_list
-                        | empty
-
-param_item              : type id
-
-block                   : statement block
-                        | empty
-
-statement               : assignment
-                        | var_declaration
-                        | condition
-                        | loop
-                        | function_call
-                        | return
-
-assignment              : id = expr ;
-if_statement            : if ( expr ) { block } else_statement
-else_statement          : else { block }
-                        | empty
-loop                    : while ( expr ) { block }
-function_call           : id ( ) ;
-return                  : return return_value ;
-return_value            : expr
-                        | empty
-
-expr                    : expr + expr
-                        | expr - expr
-                        | expr * expr
-                        | expr / expr
-                        | expr % expr
-                        | expr < expr
-                        | expr <= expr
-                        | expr > expr
-                        | expr >= expr
-                        | expr == expr
-                        | expr != expr
-                        | CINT
-                        | CCHAR
-                        | CSTRING
-                        | ID
-
-
-'''
-
 from Semantic import *
-import lexer
+import Lexer
 import sys
 
-sys.path.insert(0, "./libs")
 
-tokens = lexer.tokens
+class ParserBaseException(Exception):
+    def __init__(self, message='', line=0):
+        self.message = message
+        self.line = line
+
+
+class LexicalErrorException(ParserBaseException):
+    pass
+
+
+class SyntaxErrorException(ParserBaseException):
+    pass
+
+
+class EOFException(SyntaxErrorException):
+    pass
+
+
+tokens = Lexer.tokens
 
 semantic = Semantic()
-semantic.add_predefined_function('void', 'print', infinite=True)
-semantic.add_predefined_function('string', 'read_string')
-semantic.add_predefined_function('char', 'read_char')
-semantic.add_predefined_function('int', 'read_int')
-semantic.add_predefined_function('char', 'get_at', ['string', 'int'])
-semantic.add_predefined_function('char', 'set_at', ['string', 'int', 'char'])
 
 # Parsing rules
 
 precedence = (
-    ('left', 'OR'),
-    ('left', 'AND'),
-    ('left', 'EQ', 'NE'),
-    ('left', 'LT', 'LE', 'GT', 'GE'),
-    ('left', 'PLUS', 'MINUS'),
-    ('left', 'TIMES', 'DIVIDE', 'MODULO'),
-    ('right', 'NOT'),
-    ('right', 'UMINUS'),
-    ('right', 'FUNCTION'),
+    ('left', 'OR'), ('left', 'AND'), ('left', 'EQ', 'NE'), ('left', 'LT', 'LE', 'GT', 'GE'), ('left', 'PLUS', 'MINUS'),
+    ('left', 'TIMES', 'DIVIDE', 'MODULO'), ('right', 'NOT'), ('right', 'UMINUS'), ('right', 'FUNCTION'),
 )
 
 code = {}
@@ -440,6 +375,22 @@ def p_expr_parentless(p):
     return p
 
 
+def p_expr_explicit_retype(p):
+    '''expr : LPAREN type RPAREN LPAREN expr RPAREN'''
+    symbol = semantic.get_symbol_from_command(p[4])
+    new_symbol = semantic.add_temp_symbol(p[2])
+    if symbol.type == 'int' and new_symbol.type == 'char':
+        instruction = 'INT_TO_CHAR'
+    elif symbol.type == 'char' and new_symbol.type == 'string':
+        instruction = 'CHAR_TO_STRING'
+    elif symbol.type == 'char' and new_symbol.type == 'int':
+        instruction = 'CHAR_TO_INT'
+    else:
+        raise InvalidTypeException("Unable to convert '%s' to '%s'." % (symbol.type, new_symbol.type))
+    p[0] = p[4] + [(instruction, symbol.name, None, new_symbol.name)]
+    return p
+
+
 def p_expr_bool(p):
     '''expr : expr OR expr
             | expr AND expr'''
@@ -457,8 +408,7 @@ def p_expr_bool_not(p):
     '''expr : NOT expr'''
     symbol = semantic.get_symbol_from_command(p[2])
     if symbol.type != 'int':
-        raise IncompatibleTypesException(
-            "Logic NOT requires int operand, '%s' given." % symbol.type)
+        raise IncompatibleTypesException("Logic NOT requires int operand, '%s' given." % symbol.type)
     result = semantic.add_temp_symbol('int')
     p[0] = p[1] + p[3] + [(p[1], symbol.name, None, result.name)]
     return p
@@ -494,31 +444,40 @@ def p_error(p):
     raise SyntaxErrorException("syntax error", p.lineno)
 
 
-import ply.yacc as yacc
-import ply.lex as lex
+import libs.ply.yacc as yacc
+import libs.ply.lex as lex
 
 VYPeParser = yacc.yacc()
 
 
 def parse(data, debug=0):
-    global VYPeParser
-    VYPeParser.error = 0
+    global VYPeParser, semantic
+    semantic = Semantic()
+    semantic.add_predefined_function('void', 'print', infinite=True)
+    semantic.add_predefined_function('string', 'read_string')
+    semantic.add_predefined_function('char', 'read_char')
+    semantic.add_predefined_function('int', 'read_int')
+    semantic.add_predefined_function('char', 'get_at', ['string', 'int'])
+    semantic.add_predefined_function('char', 'set_at', ['string', 'int', 'char'])
+    semantic.add_predefined_function('string', 'strcat', ['string', 'string'])
+
     try:
         p = VYPeParser.parse(data, debug=debug)
         semantic.check_main_function()
         semantic.check_forgotten_declarations()
     except lex.LexError as e:
-        VYPeParser.error = 1
-        print >> sys.stderr, e.message
-        return None
-    except SyntaxErrorException as e:
-        VYPeParser.error = 2
-        print >> sys.stderr, "%s on line %d" % (e.message, e.line)
-        return None
-    except (NotFoundException, DeclaredFunctionNotDefinedException, IncompatibleTypesException) as e:
-        VYPeParser.error = 3
-        print >> sys.stderr, e.message
-        return None
+        raise LexicalErrorException(e.message)
+        #error = 1
+        #print >> sys.stderr, e.message
+        #return None
+    #except SyntaxErrorException as e:
+    #    error = 2
+    #    print >> sys.stderr, "%s on line %d" % (e.message, e.line)
+    #    return None
+    #except (NotFoundException, DeclaredFunctionNotDefinedException, IncompatibleTypesException) as e:
+    #    error = 3
+    #    print >> sys.stderr, e.message
+    #    return None
     return p
 
 

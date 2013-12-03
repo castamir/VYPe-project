@@ -1,5 +1,4 @@
 import sys
-sys.path.insert(0, "./libs")
 
 # Reserved words
 tokens = [
@@ -133,6 +132,6 @@ def t_error(t):
 
 
 # Build the lexer
-import ply.lex as lex
+import libs.ply.lex as lex
 
 lex.lex()
