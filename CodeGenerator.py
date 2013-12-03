@@ -57,8 +57,7 @@ class CodeGenerator:
                 self.gen('.text\n')
 
     def GenerateProgram(self, IntCode):
-        return None;
-
+        return None
 
 
 my_typle = ('FUNCTION', 'main', 3, 6)
@@ -70,6 +69,5 @@ cg.compile(my_typle)
 cg.compile(my_typle1)
 cg.compile(my_typle2)
 cg.compile(my_typle3)
-
 
 print cg.program
