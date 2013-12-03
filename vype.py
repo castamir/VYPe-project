@@ -4,7 +4,7 @@ import getopt
 import sys
 from Parser import parse, SyntaxErrorException
 from Semantic import SemanticErrorException
-from Scanner import LexicalErrorException
+from Lexer import LexicalErrorException
 
 
 class RuntimeException(Exception):

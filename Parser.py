@@ -1,5 +1,5 @@
 from Semantic import *
-import Scanner
+import Lexer
 import sys
 
 
@@ -17,7 +17,7 @@ class EOFException(SyntaxErrorException):
     pass
 
 
-tokens = Scanner.tokens
+tokens = Lexer.tokens
 
 semantic = Semantic()
 
