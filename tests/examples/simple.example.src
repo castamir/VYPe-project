@@ -1,0 +1,6 @@
+int main(void) {
+    char znak;
+    string retezec;
+    int a;
+
+}
