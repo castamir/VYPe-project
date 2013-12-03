@@ -1,6 +1,12 @@
 from SymbolTable import *
 
 
+class SyntaxErrorException(Exception):
+    def __init__(self, msg, line):
+        self.message = msg
+        self.line = line
+
+
 class EOFException(Exception):
     pass
 
@@ -76,3 +82,18 @@ class Semantic:
     def get_current_function(self):
         return self.function_table.current
 
+    def get_loop_start_label(self):
+        self._labels += 1
+        return "loop_start_%d" % self._labels
+
+    def get_loop_end_label(self):
+        self._labels += 1
+        return "loop_end_%d" % self._labels
+
+    def get_if_true_label(self):
+        self._labels += 1
+        return "if_true_%d" % self._labels
+
+    def get_if_end_label(self):
+        self._labels += 1
+        return "endif_%d" % self._labels

@@ -67,11 +67,6 @@ expr                    : expr + expr
 
 '''
 
-
-class SyntaxErrorException(Exception):
-    pass
-
-
 from Semantic import *
 import lexer
 import sys
@@ -219,7 +214,7 @@ def p_function_definition(p):
         found = statement == "RETURN"
     else:
         found = False
-    # function without return statement
+        # function without return statement
     if not found:
         function = semantic.get_current_function()
         if function.type == 'void':
@@ -286,7 +281,7 @@ def p_block(p):
 
 def p_statement_list(p):
     '''statement_list : statement_list statement
-                       | statement'''
+                      | statement'''
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 3:
@@ -297,8 +292,71 @@ def p_statement_list(p):
 def p_statement(p):
     '''statement : variable_declaration
                  | assignment
-                 | return'''
+                 | return
+                 | if_statement
+                 | loop_statement'''
     p[0] = p[1]
+    return p
+
+
+def p_loop_statement(p):
+    '''loop_statement : WHILE LPAREN expr RPAREN block_body'''
+    symbol = semantic.get_symbol_from_command(p[3])
+    label_start = semantic.get_loop_start_label()
+    label_end = semantic.get_loop_end_label()
+    p[0] = []
+    p[0] += [('LABEL', None, None, label_start)]
+    p[0] += p[3]
+    # jump to the end if zero (if false)
+    p[0] += [('JZ', symbol.name, None, label_end)]
+    # loop body
+    p[0] += p[5]
+    p[0] += [('JUMP', None, None, label_start)]
+    p[0] += [('LABEL', None, None, label_end)]
+    return p
+
+
+def p_if_statement(p):
+    '''if_statement : IF LPAREN expr RPAREN block_body if_false'''
+    symbol = semantic.get_symbol_from_command(p[3])
+    label_true = semantic.get_if_true_label()
+    label_end = semantic.get_if_end_label()
+    p[0] = p[3]
+    # jump to else branch if not zero (if not false)
+    p[0] += [('JNZ', symbol.name, None, label_true)]
+    # else branch
+    p[0] += p[6]
+    p[0] += [('JUMP', None, None, label_end)]
+    p[0] += [('LABEL', None, None, label_true)]
+    # true branch
+    p[0] += p[5]
+    # end of statement
+    p[0] += [('LABEL', None, None, label_end)]
+    return p
+
+
+def p_if_false(p):
+    '''if_false : ELSE block_body'''
+    p[0] = p[2]
+    return p
+
+
+def p_block_body(p):
+    '''block_body : block_start block_end'''
+    p[0] = p[2]
+    return p
+
+
+def p_block_start(p):
+    '''block_start : LBRACE'''
+    semantic.symbol_table.push_scope()
+    return p
+
+
+def p_block_end(p):
+    '''block_end : block RBRACE'''
+    p[0] = p[1]
+    semantic.symbol_table.pop_scope()
     return p
 
 
@@ -318,7 +376,6 @@ def p_return(p):
             raise InvalidArgumentException(
                 "Invalid type of a return value. Expected '%s', but '%s' given" % (current_function.type, symbol.type))
         p[0] = p[2] + [('RETURN', symbol.name, None, None)]
-        # TODO check semantic actions for return statement
     return p
 
 
@@ -373,7 +430,7 @@ def p_expr_string(p):
 def p_expr_single_variable(p):
     '''expr : ID'''
     symbol = semantic.get_symbol(p[1])
-    p[0] = [('TEMP_FROM_ID', None, None, symbol.name)]
+    p[0] = [('LOAD', symbol.type, None, symbol.name)]
     return p
 
 
@@ -434,7 +491,7 @@ def p_empty(p):
 def p_error(p):
     if not p:
         raise EOFException("Unexpected end of file.")
-    raise SyntaxErrorException("syntax error")
+    raise SyntaxErrorException("syntax error", p.lineno)
 
 
 import ply.yacc as yacc
@@ -456,7 +513,7 @@ def parse(data, debug=0):
         return None
     except SyntaxErrorException as e:
         VYPeParser.error = 2
-        print >> sys.stderr, e.message
+        print >> sys.stderr, "%s on line %d" % (e.message, e.line)
         return None
     except (NotFoundException, DeclaredFunctionNotDefinedException, IncompatibleTypesException) as e:
         VYPeParser.error = 3
