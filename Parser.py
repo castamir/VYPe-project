@@ -9,10 +9,6 @@ class ParserBaseException(Exception):
         self.line = line
 
 
-class LexicalErrorException(ParserBaseException):
-    pass
-
-
 class SyntaxErrorException(ParserBaseException):
     pass
 
@@ -76,9 +72,8 @@ def p_variable_declaration(p):
         try:
             semantic.add_symbol(name, type)
         except AlreadyDefinedException as e:
-            p.parser.error = 3
-            print >> sys.stderr, e.message
-            return
+            e.line = p.lineno(-1)
+            raise
         p[0].append(('DIM', p[1], init_value, name))
     return p
 
@@ -300,16 +295,17 @@ def p_return(p):
               | RETURN SEMI'''
     if len(p) == 3:
         if semantic.get_current_function().type == 'void':
-            raise InvalidArgumentException("Void functions cannot return a value.")
+            raise InvalidArgumentException("Void functions cannot return a value.", p.lineno(-1))
         p[0] = [('RETURN', None, None, None)]
     else:
         symbol = semantic.get_symbol_from_command(p[2])
         current_function = semantic.get_current_function()
         if current_function.type != 'void':
-            raise InvalidArgumentException("Non-void functions cannot have a non-value return statement.")
+            raise InvalidArgumentException("Non-void functions cannot have a non-value return statement.", p.lineno(-1))
         if current_function.type != symbol.type:
             raise InvalidArgumentException(
-                "Invalid type of a return value. Expected '%s', but '%s' given" % (current_function.type, symbol.type))
+                "Invalid type of a return value. Expected '%s', but '%s' given" % (current_function.type, symbol.type),
+                p.lineno(-1))
         p[0] = p[2] + [('RETURN', symbol.name, None, None)]
     return p
 
@@ -320,7 +316,8 @@ def p_assignment(p):
     rsymbol = semantic.get_symbol_from_command(p[3])
     if lsymbol.type != rsymbol.type:
         raise IncompatibleTypesException(
-            "Unable to assign value of type '%s' into a variable of type '%s'." % (rsymbol.type, lsymbol.type))
+            "Unable to assign value of type '%s' into a variable of type '%s'." % (rsymbol.type, lsymbol.type),
+            p.lineno(-1))
     p[0] = p[3] + [('=', rsymbol.name, None, lsymbol.name)]
     return p
 
@@ -335,7 +332,7 @@ def p_expr_arithmetic(p):
     rsymbol = semantic.get_symbol_from_command(p[3])
     if lsymbol.type != rsymbol.type or lsymbol.type != 'int':
         raise IncompatibleTypesException(
-            "Arithmetic operations requires int operands, '%s' and '%s' given." % (lsymbol.type, rsymbol.type))
+            "Arithmetic operations requires int operands, '%s' and '%s' given." % (lsymbol.type, rsymbol.type), p.lineno(-1))
     result = semantic.add_temp_symbol('int')
     p[0] = p[1] + p[3] + [(p[2], lsymbol.name, rsymbol.name, result.name)]
     return p
@@ -386,7 +383,7 @@ def p_expr_explicit_retype(p):
     elif symbol.type == 'char' and new_symbol.type == 'int':
         instruction = 'CHAR_TO_INT'
     else:
-        raise InvalidTypeException("Unable to convert '%s' to '%s'." % (symbol.type, new_symbol.type))
+        raise InvalidTypeException("Unable to convert '%s' to '%s'." % (symbol.type, new_symbol.type), p.lineno(-1))
     p[0] = p[4] + [(instruction, symbol.name, None, new_symbol.name)]
     return p
 
@@ -398,7 +395,7 @@ def p_expr_bool(p):
     rsymbol = semantic.get_symbol_from_command(p[3])
     if lsymbol.type != 'int' or rsymbol.type != 'int':
         raise IncompatibleTypesException(
-            "Logic operations requires int operands, '%s' and '%s' given." % (lsymbol.type, rsymbol.type))
+            "Logic operations requires int operands, '%s' and '%s' given." % (lsymbol.type, rsymbol.type), p.lineno(-1))
     result = semantic.add_temp_symbol('int')
     p[0] = p[1] + p[3] + [(p[2], lsymbol.name, rsymbol.name, result.name)]
     return p
@@ -408,7 +405,7 @@ def p_expr_bool_not(p):
     '''expr : NOT expr'''
     symbol = semantic.get_symbol_from_command(p[2])
     if symbol.type != 'int':
-        raise IncompatibleTypesException("Logic NOT requires int operand, '%s' given." % symbol.type)
+        raise IncompatibleTypesException("Logic NOT requires int operand, '%s' given." % symbol.type, p.lineno(-1))
     result = semantic.add_temp_symbol('int')
     p[0] = p[1] + p[3] + [(p[1], symbol.name, None, result.name)]
     return p
@@ -426,7 +423,7 @@ def p_expr_relation(p):
     if lsymbol.type != rsymbol.type:
         raise IncompatibleTypesException(
             "Relation operations requires operands of the same type, '%s' and '%s' given." % (
-                lsymbol.type, rsymbol.type))
+                lsymbol.type, rsymbol.type), p.lineno(-1))
     result = semantic.add_temp_symbol('int')
     p[0] = p[1] + p[3] + [(p[2], lsymbol.name, rsymbol.name, result.name)]
     return p
@@ -461,23 +458,9 @@ def parse(data, debug=0):
     semantic.add_predefined_function('char', 'set_at', ['string', 'int', 'char'])
     semantic.add_predefined_function('string', 'strcat', ['string', 'string'])
 
-    try:
-        p = VYPeParser.parse(data, debug=debug)
-        semantic.check_main_function()
-        semantic.check_forgotten_declarations()
-    except lex.LexError as e:
-        raise LexicalErrorException(e.message)
-        #error = 1
-        #print >> sys.stderr, e.message
-        #return None
-    #except SyntaxErrorException as e:
-    #    error = 2
-    #    print >> sys.stderr, "%s on line %d" % (e.message, e.line)
-    #    return None
-    #except (NotFoundException, DeclaredFunctionNotDefinedException, IncompatibleTypesException) as e:
-    #    error = 3
-    #    print >> sys.stderr, e.message
-    #    return None
+    p = VYPeParser.parse(data, debug=debug)
+    semantic.check_main_function()
+    semantic.check_forgotten_declarations()
     return p
 
 

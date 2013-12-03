@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 import getopt
 import sys
-from Parser import parse, SyntaxErrorException, LexicalErrorException
+from Parser import parse, SyntaxErrorException
 from Semantic import SemanticErrorException
+from Lexer import LexicalErrorException
 
 
 class RuntimeException(Exception):
@@ -36,8 +37,7 @@ class VYPeProject:
             self.print_help()
             return 0
         if self.input_file is None:
-            print >> sys.stderr, "Missing input file. Try it again with -h to see more."
-            return 5
+            raise RuntimeException("Missing input file. Try it again with -h to see more.")
         with open(self.input_file, "r") as my_file:
             data = my_file.read()
         tac = self.parse(data)
@@ -63,13 +63,13 @@ if __name__ == "__main__":
     try:
         exitcode = project.run()
     except LexicalErrorException as e:
-        print >> sys.stderr, e.message
+        print >> sys.stderr, "Line %d: %s" % (e.line, e.message)
         exitcode = 1
     except SyntaxErrorException as e:
-        print >> sys.stderr, "%s on line %d" % (e.message, e.line)
+        print >> sys.stderr, "Line %d: %s" % (e.line, e.message)
         exitcode = 2
     except SemanticErrorException as e:
-        print >> sys.stderr, e.message
+        print >> sys.stderr, "Line %d: %s" % (e.line, e.message)
         exitcode = 3
     except RuntimeException as e:
         print >> sys.stderr, e.message
