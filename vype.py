@@ -5,7 +5,7 @@ import sys
 from Parser import parse, SyntaxErrorException
 from Semantic import SemanticErrorException
 from Lexer import LexicalErrorException
-from CodeGenerator import CodeGenerator
+#from CodeGenerator import CodeGenerator
 
 
 class RuntimeException(Exception):

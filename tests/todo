@@ -1,7 +1,4 @@
-dodelat projekt.py tak, aby zpracovaval parametry pri spusteni (pro zacatek nazev souboru a help)
-
-tester, jez bude spoustet project.py pro vsechny vzorove i chybne vstupy... chybove kody pozna podle nazvu slozky,
-konkretni chyby podle nazvu souboru
+pridat vsechny mozne i nemozne testy
 
 specialne vyclenit globalni promenne
 
