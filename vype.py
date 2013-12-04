@@ -5,6 +5,7 @@ import sys
 from Parser import parse, SyntaxErrorException
 from Semantic import SemanticErrorException
 from Lexer import LexicalErrorException
+from CodeGenerator import CodeGenerator
 
 
 class RuntimeException(Exception):
@@ -48,13 +49,17 @@ class VYPeProject:
     def parse(data):
         tac = parse(data)
         # debug prints
-        if tac is not None:
-            for line in tac:
-                print line
-                pass
+        #if tac is not None:
+        #    for line in tac:
+        #        print line
+        #        pass
         return tac
 
     def generate_target_program(self, tac):
+        #cg = CodeGenerator()
+        #for line in tac:
+        #    cg.compile(line)
+        #print cg.program
         pass
 
 
