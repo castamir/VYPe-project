@@ -1,15 +1,23 @@
 
 int identifikator;
-char znak;int cislo;
+char znak; int cislo;
 
 int main(void);
 
 int main(void) {
-    char znak;
-    string retezec,promenna;
+    cislo = 1;
+    cislo = 2 + 3 * 4;
+    cislo = cislo / 1;
+    cislo = 1 < 2;
+    cislo = 1 && 2;
+    cislo = 1 || 2;
+    cislo = 0 && 1 || 2;
+    return;
 }
 
 int testovaci_funkce(char arg, int cislo) {
-    char znak;
-    string retezec,promenna;
+    cislo = 1;
+    arg = 'c';
+    string retezec;
+    retezec = "text";
 }
