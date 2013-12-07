@@ -23,6 +23,8 @@ class CodeGenerator:
         self.Reg[preg] = 'used', varname
 
     def free_register(self, preg):
+        if self.Reg[preg][0] == 'used':
+            #move to memory
         self.Reg[preg] = 'free', None
 
     def find_free_register(self):
@@ -140,7 +142,7 @@ class CodeGenerator:
         r = self.getreg(second, ForRead)
         s = self.getreg(third, ForRead)
         t = self.getreg(forth, ForWrite)
-        self.gen(self.getop(first)+ ' $' + t + ',$' + r + ', $' + s)
+        self.gen(self.getop(first) + ' $' + t + ',$' + r + ', $' + s)
         self.Reg[t] = 'used', forth             #modify TR, result is in T
         self.set_register_in_ta(forth, t)       #modify TA, result
 
@@ -187,6 +189,17 @@ class CodeGenerator:
         #(BINOPERATION, 'argument1', 'argument2', 'vysledek')
         if self.getop(first) is not None:
             self.compile_bin_operation(first, element)
+            #(IF,)
+        #LOOP
+        #(RETURN,value,none,none)
+        if first == 'RETURN':
+            if second is not None:
+                self.gen('move $v0,' + self.Reg[self.look_variable_in_register(second)])
+                #todo clear registers
+            self.gen('move $sp, $fp')
+            self.gen('lw $ra, -4($fp)')
+            self.gen('lw $fp, 0($fp)')
+            self.gen('jr $ra')
 
     def GenerateProgram(self, IntCode):
         return None
