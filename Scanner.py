@@ -114,17 +114,13 @@ def t_ID(t):
 def t_COMMENT(t):
     r'/\*(.|\n)*?\*/'
     t.lexer.lineno += t.value.count('\n')
-    #t.lexer.skip(1)
 
 # Comment (C++-Style)
 def t_BLOCKCOMMENT(t):
     r'//.*\n'
     t.lexer.lineno += 1
-    #t.lexer.skip(1)
-
 
 t_ignore = " \t"
-
 
 def t_newline(t):
     r'\n+'

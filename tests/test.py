@@ -11,7 +11,10 @@ separator = "*******************************"
 errors = 0
 total = 0
 
-tests = {0: ('./examples/correct', 'Expected zero errors'), 1: ('./examples/error/1', 'Expected lexical errors')}
+tests = {
+    0: ('./examples/correct', 'Expected zero errors'),
+    1: ('./examples/error/1', 'Expected lexical errors')
+}
 
 print separator, "\ntesting started\n", separator
 for expected in tests:
