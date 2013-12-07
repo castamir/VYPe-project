@@ -332,7 +332,8 @@ def p_expr_arithmetic(p):
     rsymbol = semantic.get_symbol_from_command(p[3])
     if lsymbol.type != rsymbol.type or lsymbol.type != 'int':
         raise IncompatibleTypesException(
-            "Arithmetic operations requires int operands, '%s' and '%s' given." % (lsymbol.type, rsymbol.type), p.lineno(-1))
+            "Arithmetic operations requires int operands, '%s' and '%s' given." % (lsymbol.type, rsymbol.type),
+            p.lineno(-1))
     result = semantic.add_temp_symbol('int')
     p[0] = p[1] + p[3] + [(p[2], lsymbol.name, rsymbol.name, result.name)]
     return p
@@ -372,6 +373,16 @@ def p_expr_parentless(p):
     return p
 
 
+def p_expr_uminus(p):
+    '''expr : MINUS expr %prec UMINUS'''
+    symbol = semantic.get_symbol_from_command(p[2])
+    if symbol.type != 'int':
+        raise IncompatibleTypesException("Unary minus requires 'int', but '%s' given." % symbol.type, p.lineno(-1))
+    result = semantic.add_temp_symbol('int')
+    p[0] = p[2] + [('UMINUS', symbol.name, None, result.name)]
+    return p
+
+
 def p_expr_explicit_retype(p):
     '''expr : LPAREN type RPAREN LPAREN expr RPAREN'''
     symbol = semantic.get_symbol_from_command(p[4])
@@ -402,12 +413,12 @@ def p_expr_bool(p):
 
 
 def p_expr_bool_not(p):
-    '''expr : NOT expr'''
+    '''expr : NOT expr %prec NOT'''
     symbol = semantic.get_symbol_from_command(p[2])
     if symbol.type != 'int':
         raise IncompatibleTypesException("Logic NOT requires int operand, '%s' given." % symbol.type, p.lineno(-1))
     result = semantic.add_temp_symbol('int')
-    p[0] = p[1] + p[3] + [(p[1], symbol.name, None, result.name)]
+    p[0] = p[2] + [('NOT', symbol.name, None, result.name)]
     return p
 
 
