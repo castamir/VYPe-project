@@ -383,6 +383,41 @@ def p_expr_uminus(p):
     return p
 
 
+def p_expr_call(p):
+    '''expr : ID LPAREN expr_list RPAREN %prec FUNCTION'''
+    function = semantic.get_function(p[1])
+    commands, args = p[3]
+
+    semantic.validate(function, args)
+
+    symbol = semantic.add_temp_symbol(function.type)
+    p[0] = commands + [('CALL', function.name, function.type, symbol.name)]
+    return p
+
+
+def p_expr_list(p):
+    '''expr_list : nonempty_expr_list
+                 | empty'''
+    if isinstance(p[1], tuple):
+        p[0] = p[1]
+    else:
+        p[0] = ([], [])
+    return p
+
+
+def p_nonempty_expr_list(p):
+    '''nonempty_expr_list : nonempty_expr_list COMMA expr
+                          | expr'''
+    if len(p) == 4:
+        commands, args = p[1]
+        symbol = semantic.get_symbol_from_command(p[3])
+        p[0] = (commands + p[3] + [('PARAM', symbol.type, None, symbol.name)], args + [symbol.type])
+    elif len(p) == 2:
+        symbol = semantic.get_symbol_from_command(p[1])
+        p[0] = (p[1] + [('PARAM', symbol.type, None, symbol.name)], [symbol.type])
+    return p
+
+
 def p_expr_explicit_retype(p):
     '''expr : LPAREN type RPAREN LPAREN expr RPAREN'''
     symbol = semantic.get_symbol_from_command(p[4])
