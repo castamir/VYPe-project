@@ -106,6 +106,14 @@ class FunctionTable:
             functions.append(description)
         return ", ".join(functions)
 
+    def get(self, name):
+        if self.is_declared(name):
+            return self.declarations[name]
+        elif self.is_defined(name):
+            return self.functions[name]
+        else:
+            raise NotFoundException("Function '%s' not found." % name)
+
     def add(self, name, type, args=None, infinite=False):
         if args is None:
             args = []
@@ -214,6 +222,9 @@ class Semantic:
     def get_symbol(self, name):
         return self.symbol_table.get(name)
 
+    def get_function(self, name):
+        return self.function_table.get(name)
+
     def add_temp_symbol(self, type):
         name = self._get_new_label()
         return self.add_symbol(name, type)
@@ -278,3 +289,19 @@ class Semantic:
     def get_if_end_label(self):
         self._labels += 1
         return "endif_%d" % self._labels
+
+    def validate(self, function, args):
+        types = []
+        for instr in args:
+            symbol = self.get_symbol_from_command([instr])
+            types.append(symbol.type)
+        function_arg_types = copy.copy(function.arg_types)
+        for t in types:
+            try:
+                ft = function_arg_types.pop(0)
+            except IndexError:
+                raise TooManyArgumentsException("Too many arguments. Expected %d, but %d given." % (len(function.arg_types), len(types)))
+            if t != ft:
+                raise InvalidTypeException("Incompatible type '%s', expected '%s'." % (t, ft))
+        if len(function_arg_types) > 0:
+            raise TooFewArgumentsException("Too few arguments. Expected %d, but %d given." % (len(function.arg_types), len(types)))
