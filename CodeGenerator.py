@@ -18,7 +18,15 @@ class CodeGenerator:
     AddressTable = {}                       #( memory, (segment,offset), registername, namevariable)
     goffset = 0                             #indicates an offset in global segment. Always of the first free row
     foffset = []                            #indicates offsets in segments. Always of the first free "row"
-    is_in_global = (False, False, False)    #started ,in a function  ended
+    is_data_segment = None                  #None - no segment started, true - data segment started, False -text segment
+    main_started = False
+    is_in_func = False                      #if we are in the body of some function
+
+    def is_global(self):        #todo int a; function test(void){int o; o =9}; int b; int main(void){int b;}
+        if not self.is_in_func:
+            return True
+        else:
+            return False
 
     def use_register(self, preg, varname):
         self.Reg[preg] = 'used', varname        #modify TR
@@ -67,10 +75,13 @@ class CodeGenerator:
     def get_address(self, varname): # todo renaming of global variables
         for i in range(len(self.AddressTable)):
             if self.AddressTable[i][3] == varname:
-                if self.AddressTable[i][1][0] == 'fp':  #variable is in a current frame
-                    return str(-self.AddressTable[i][1][1]) + '($fp)'
-                else:   #variable is in a global segment
-                    return str(self.AddressTable[i][1][1]) + '($gp)'
+                if self.AddressTable[i][1] is None and self.AddressTable[i][2] is None: #it is a string in data segment, its name is its address
+                    return self.AddressTable[i][3]
+                else:
+                    if self.AddressTable[i][1][0] == 'fp':  #variable is in a current frame
+                        return str(-self.AddressTable[i][1][1]) + '($fp)'
+                    else:   #variable is in a global segment
+                        return str(self.AddressTable[i][1][1]) + '($gp)'
         return None     #didnt find a variable in the TA
 
     def set_register_in_ta(self, varname, register):    # todo renaming of global variables
@@ -123,33 +134,50 @@ class CodeGenerator:
         self.Reg['s6'] = 'free', None
         self.Reg['s7'] = 'free', None
         self.pc = 0
+       # self.gen('.text')
+       # self.gen('main:')
         #self.gen('.align 2')    #todo ??
 
-    @staticmethod
-    def getop(x):
+    def getbinop(self, x):
         return {
-            '+': 'add', #add $r,$s,$t           $r=$s+$t
-            '-': 'sub', #sub $r,$s,$t           $r=$s-$t
-            '*': 'mul', #mul $r,$s,$t           $r=$s*$t (first 32 bits)
-            '/': 'div', #div $s,$t ; mflo $d    quotient                    (pseudo)
-            '%': 'rem', #div $s,$t ; mfhi $d    reminder                    (pseudo)
+            '+': 'add',  #add $r,$s,$t           $r=$s+$t
+            '-': 'sub',  #sub $r,$s,$t           $r=$s-$t
+            '*': 'mul',  #mul $r,$s,$t           $r=$s*$t (first 32 bits)
+            '/': 'div',  #div $s,$t ; mflo $d    quotient                    (pseudo)
+            '%': 'rem',  #div $s,$t ; mfhi $d    reminder                    (pseudo)
             '&&': 'and', #and $r,$s,$t           $t= $r bitwise AND $s
-            '||': 'or', #or  $r,$s,$t           $t= $r bitwise OR $s
-            '<': 'slt', #slt $r,$s,$t           $t= ($r < $s)
+            '||': 'or',  #or  $r,$s,$t           $t= $r bitwise OR $s
+            '<': 'slt',  #slt $r,$s,$t           $t= ($r < $s)
             '==': 'seq', #seq $r,$s,$t           $t= ($r == $s)              (pseudo)
-            '>': 'sgt', #sgt $r,$s,$t           $t= ($r > $s)               (pseudo)
+            '>': 'sgt',  #sgt $r,$s,$t           $t= ($r > $s)               (pseudo)
             '>=': 'sge', #sge $r,$s,$t           $t= ($r >= $s)              (pseudo)
             '<=': 'sle', #sle $r,$s,$t           $t= ($r <= $s)              (pseudo)
             '!=': 'sne', #sne $r,$s,$t           $t= ($r != $s)              (pseudo)
         }.get(x, None)
 
-    def compile_bin_operation(self, operation, element):
+    def getunop(self,y):
+        return {
+            'NOT': 'not',    #not $r,$s           $r=!$s                      (pseudo)
+            '=': 'move',     #move $r,$s          $r=$s                       (pseudo)
+            'UMINUS': 'neg', #neg $r,$s           $r=-$s                      (pseudo)
+        }.get(y, None)
+
+    def compile_bin_operation(self, element):
         first, second, third, forth = element
         r = self.getreg(second, ForRead)
         s = self.getreg(third, ForRead)
         t = self.getreg(forth, ForWrite)
-        self.gen(self.getop(first) + ' $' + t + ',$' + r + ', $' + s)
+        self.gen(self.getbinop(first) + ' $' + t + ',$' + r + ', $' + s)
         self.use_register(t, forth)
+        self.check_temp_var(element)                    #free used temp variables
+
+    def compile_un_op(self, element):
+        first, second, third, forth = element
+        r = self.getreg(second, ForRead)
+        t = self.getreg(forth, ForWrite)
+        self.gen(self.getunop(first) + ' $' + t + ',$' + r)
+        self.use_register(t, forth)
+        self.check_temp_var(element)                    #free used temp variables
 
     def check_temp_var(self, element):
         first, variable1, variable2, forth = element
@@ -162,18 +190,17 @@ class CodeGenerator:
 
     def compile(self, element):
         first, second, third, forth = element
-        self.gen('#' + str(first) + ',' + str(second) + ',' + str(third) + ',' + str(forth))
+        #self.gen(';' + str(first) + ',' + str(second) + ',' + str(third) + ',' + str(forth))
 
         #('FUNCTION', name , none , none)
         if first == 'FUNCTION':
-            if self.is_in_global[0]:
+            #save registers todo
+            self.is_in_func = True
+            if (self.is_data_segment is None) or self.is_data_segment:
                 self.gen('.text')
-                started, infunc, ended = self.is_in_global
-                self.is_in_global = (False, True, ended)
-            if second == 'main':
-                self.gen('.globl main')
-                started, infunc, ended = self.is_in_global
-                self.is_in_global = (started, infunc, True)
+                self.is_data_segment = False
+            if (second == 'main'):
+                self.main_started = True
             self.gen(second + ':')
             self.gen('subu $sp, $sp, 8')  # decrement sp to make space to save ra, fp
             self.gen('sw $fp, 8($sp)')    # save fp
@@ -185,18 +212,33 @@ class CodeGenerator:
 
         #('DIM', 'typ', 'value', 'jmeno')
         if first == 'DIM':
-            if not self.is_in_global[0] and not self.is_in_global[1] and not self.is_in_global[2]:
-                self.gen('.data')
-                started, infunc, ended = self.is_in_global
-                self.is_in_global = (True, infunc, ended)
             if second == 'char': #todo it is byte! how does it work
-                self.gen('addiu $t0,$zero,\'' + str(third))
-                self.gen('sw $t0,4($sp)\n')        # save variable in stack
+                if (self.is_data_segment is None) or self.is_data_segment:
+                    self.gen('.text')
+                    self.is_data_segment = False
+                r = self.getreg(forth, ForWrite)                    #find register for storing variable
+                self.gen('addiu $'+r+' , $zero, \'' + str(third)+'\'')        #load value in this register
+                if self.is_global():    #todo is global???
+                    self.gen('sw $' + r + ',' + str(self.goffset) + '($gp)')
+                    self.AddressTable[len(self.AddressTable)] = 'memory', (
+                        'gp', self.goffset), r, forth   #save information in TA about variable
+                    self.goffset += 4                   #calclate an offset of the next global variable in this segment
+                else:
+                    self.gen('subu $sp, $sp, 4')                        #decrement sp to make space for local variable
+                    self.gen('sw $' + r + ',4($sp)')                    #save variable in stack
+                    self.AddressTable[len(self.AddressTable)] = 'memory', (
+                        'fp', self.foffset[len(self.foffset) - 1]), r, forth   #save information in TA about variable
+                    self.foffset[len(self.foffset) - 1] = self.foffset[len(
+                        self.foffset) - 1] + 4           #calclate offset of the next local variable in this segment
+                self.Reg[r] = 'used', forth
             if second == 'int':
+                if (self.is_data_segment is None) or self.is_data_segment:
+                    self.gen('.text')
+                    self.is_data_segment = False
                 r = self.getreg(forth, ForWrite)                    #find register for storing variable
                 self.gen('li $' + r + ', ' + str(third))            #load value in this register
-                if (not self.is_in_global[1]) and (not self.is_in_global[2]):
-                    self.gen('sw $'+r+','+str(self.goffset)+'($gp)')
+                if self.is_global():    #todo is global???
+                    self.gen('sw $' + r + ',' + str(self.goffset) + '($gp)')
                     self.AddressTable[len(self.AddressTable)] = 'memory', (
                         'gp', self.goffset), r, forth   #save information in TA about variable
                     self.goffset += 4                   #calclate an offset of the next global variable in this segment
@@ -209,41 +251,59 @@ class CodeGenerator:
                         self.foffset) - 1] + 4           #calclate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth
             if second == 'string': #todo check to work
-                self.gen('.data\n')
-                self.gen(forth + ':\n .asciiz "' + third + '"\n')  #store a string in a memory
-                self.gen('.text\n')
+                if (self.is_data_segment is None) or not self.is_data_segment:
+                    self.gen('.data')
+                    self.is_data_segment = True
+                self.gen(forth + ':')
+                self.gen('.asciiz "' + third + '"')  #store a string in a memory
+                self.AddressTable[len(self.AddressTable)] = 'memory', None, None, forth #todo add to TA
 
         #(BINOPERATION, 'argument1', 'argument2', 'vysledek')
-        if self.getop(first) is not None:
-            self.compile_bin_operation(first, element)
-            self.check_temp_var(element)                    #free used temp variables
+        if self.getbinop(first) is not None:
+            self.compile_bin_operation(element)
+
+        #('UNARYOPERATION', varname, None, vysledek)
+        if self.getunop(first) is not None:
+            self.compile_un_op(element)
 
         #LOOP
         #(RETURN,value,none,none)
         if first == 'RETURN':
             if second is not None:
-                self.gen('move $v0,' + self.Reg[self.look_variable_in_register(second)])
+                if self.look_variable_in_register(second) is None:
+                    r = self.getreg(second, ForWrite)                   #find register for storing variable
+                    self.gen('li $' + r + ', ' + str(third))            #load value in this register #todo v zavisimosti ot type variable
+                self.gen('move $v0, $' + self.look_variable_in_register(second))
                 #todo clear registers
-
-            #is_in_global infunc = false
+                #todo clear addresstable
             self.gen('move $sp, $fp')
             self.gen('lw $ra, -4($fp)')
             self.gen('lw $fp, 0($fp)')
             self.gen('jr $ra')
-
-        #('=', varname, None, vysledek)
-        if first == '=':
-            r = self.getreg(second, ForRead)
-            t = self.getreg(forth, ForWrite)
-            self.gen('move' + ' $' + t + ',$' + r)
-            self.use_register(t, forth)
-            self.check_temp_var(element)                    #free used temp variables
+            self.is_in_func = False
 
         #('TEMP', type, value, tempname)
         if first == 'TEMP':
-            #if second == 'char': #todo it is byte! how does it work
-             #   self.gen('addiu $t0,$zero,\'' + str(forth))
-            #    self.gen('sw $t0,4($sp)\n')        # save variable in stack
+            if second == 'char': #todo it is byte! how does it work
+                if (self.is_data_segment is None) or self.is_data_segment:
+                    self.gen('.text')
+                    self.is_data_segment = False
+                r = self.getreg(forth, ForWrite)                    #find register for storing variable
+                self.gen('addiu $'+r+',$zero,\'' + str(third)+'\'')        #load value in this register
+                #if self.is_global():    #todo is global???
+                #    self.gen('sw $' + r + ',' + str(self.goffset) + '($gp)')
+                #    self.AddressTable[len(self.AddressTable)] = 'memory', (
+                #        'gp', self.goffset), r, forth   #save information in TA about variable
+                #    self.goffset += 4                   #calclate an offset of the next global variable in this segment
+                #else:
+                #    self.gen('subu $sp, $sp, 4')                        #decrement sp to make space for local variable
+                #    self.gen('sw $' + r + ',4($sp)')                    #save variable in stack
+                #    self.AddressTable[len(self.AddressTable)] = 'memory', (
+                #        'fp', self.foffset[len(self.foffset) - 1]), r, forth   #save information in TA about variable
+                #    self.foffset[len(self.foffset) - 1] = self.foffset[len(
+                #        self.foffset) - 1] + 4           #calclate offset of the next local variable in this segment
+                self.Reg[r] = 'used', forth
+                #self.AddressTable[len(self.AddressTable)] = 'memory', None, r, forth
             if second == 'int':
                 r = self.getreg(forth, ForWrite)                    #find a register for storing a variable
                 self.gen('li $' + r + ', ' + str(third))            #load value in this register
@@ -260,17 +320,21 @@ class CodeGenerator:
                 #        self.foffset) - 1] + 4           #calclate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth
                 #self.AddressTable[len(self.AddressTable)] = 'memory', None, r, forth
-            #if second == 'string': #todo check to work
-            #    self.gen('.data\n')
-            #    self.gen(third + ':\n .asciiz "' + forth + '"\n')  #store a string in a memory
-            #    self.gen('.text\n')
-    #Uminus
-    #!
+            if (second == 'string'): #todo check to work
+                if (self.is_data_segment is None) or not self.is_data_segment:
+                    self.gen('.data')
+                    self.is_data_segment = True
+                self.gen(forth + ':')
+                self.gen('.asciiz "' + third + '"')  #store a string in a memory
+                self.AddressTable[len(self.AddressTable)] = 'memory', None, None, forth #todo add to TA
 
     def GenerateProgram(self, tac):
         for line in tac:
             self.compile(line)
         self.gen('')
+        f = open('myfile.asm','w')
+        f.write(self.program) # python will convert \n to os.linesep
+        f.close() # you can omit in most cases as the destructor will call if
 
 
 #my_tuple = ('FUNCTION', 'main', 3, 6)

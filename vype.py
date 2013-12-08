@@ -56,10 +56,10 @@ class VYPeProject:
         return tac
 
     def generate_target_program(self, tac):
-        cg = CodeGenerator()
-        for line in tac:
-            cg.compile(line)
-        print cg.program
+        #cg = CodeGenerator()
+        #for line in tac:
+        #    cg.compile(line)
+        #print cg.program
 
         cg1 = CodeGenerator()
         cg1.GenerateProgram(tac)
