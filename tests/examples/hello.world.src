@@ -1,7 +1,14 @@
 
 int identifikator;
-char znak; int cislo;
+//char znak;
+ int cislo;
 
+//int testovaci_funkce1(char arg, int cislo) {
+//    cislo = 1;
+//    arg = 'c';
+//    string retezec;
+//    retezec = "text";
+//}
 int main(void);
 
 int main(void) {
@@ -12,12 +19,20 @@ int main(void) {
     cislo = 1 && 2;
     cislo = 1 || 2;
     cislo = 0 && 1 || 2;
+    cislo = 1 > 4;
+    cislo = 1>=0;
+    cislo = 1 <=2;
+    cislo = 1 == 4;
+   // cislo = -4;
+    cislo = (1+9 - 10)* 7 -(98%3);
+   // cislo = !0;
+   // cislo = -cislo;
     return;
 }
 
-int testovaci_funkce(char arg, int cislo) {
-    cislo = 1;
-    arg = 'c';
-    string retezec;
-    retezec = "text";
-}
+//int testovaci_funkce(char arg, int cislo) {
+//    cislo = 1;
+//    arg = 'c';
+//    string retezec;
+//    retezec = "text";
+//}

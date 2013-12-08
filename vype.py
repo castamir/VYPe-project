@@ -5,7 +5,7 @@ import sys
 from Parser import parse, SyntaxErrorException
 from Semantic import SemanticErrorException
 from Scanner import LexicalErrorException
-#from CodeGenerator import CodeGenerator
+from CodeGenerator import CodeGenerator
 
 
 class RuntimeException(Exception):
@@ -48,18 +48,23 @@ class VYPeProject:
     @staticmethod
     def parse(data):
         tac = parse(data)
-        # debug prints
-        #if tac is not None:
-        #    for line in tac:
-        #        print line
-        #        pass
+        #debug prints
+        if tac is not None:
+            for line in tac:
+                pass
+                print line
         return tac
 
     def generate_target_program(self, tac):
-        #cg = CodeGenerator()
-        #for line in tac:
-        #    cg.compile(line)
-        #print cg.program
+        cg = CodeGenerator()
+        for line in tac:
+            cg.compile(line)
+        print cg.program
+
+        cg1 = CodeGenerator()
+        cg1.GenerateProgram(tac)
+        print '\n'
+        print cg1.program
         pass
 
 
@@ -76,10 +81,11 @@ if __name__ == "__main__":
     except SemanticErrorException as e:
         print >> sys.stderr, "Line %d: %s" % (e.line, e.message)
         exitcode = 3
-    except RuntimeException as e:
-        print >> sys.stderr, e.message
-        exitcode = 5
-    except Exception as e:
-        print >> sys.stderr, "Runtime error occurred.", e.message
-        exitcode = 5
+    #except RuntimeException as e:
+    #   print >> sys.stderr, e.message
+    #    exitcode = 5
+    #except Exception as e:
+    #    print >> sys.stderr, "Runtime error occurred.", e.message
+    #    exitcode = 5
     sys.exit(exitcode)
+
