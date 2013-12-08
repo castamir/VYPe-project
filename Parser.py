@@ -391,7 +391,7 @@ def p_expr_call(p):
     semantic.validate(function, args)
 
     symbol = semantic.add_temp_symbol(function.type)
-    p[0] = commands + args + [('CALL', function.name, function.type, symbol.name)]
+    p[0] = commands + [('CALL', function.name, function.type, symbol.name)]
     return p
 
 
@@ -411,10 +411,10 @@ def p_nonempty_expr_list(p):
     if len(p) == 4:
         commands, args = p[1]
         symbol = semantic.get_symbol_from_command(p[3])
-        p[0] = (commands + p[3], args + [('PARAM', symbol.type, None, symbol.name)])
+        p[0] = (commands + p[3] + [('PARAM', symbol.type, None, symbol.name)], args + [symbol.type])
     elif len(p) == 2:
         symbol = semantic.get_symbol_from_command(p[1])
-        p[0] = (p[1], [('PARAM', symbol.type, None, symbol.name)])
+        p[0] = (p[1] + [('PARAM', symbol.type, None, symbol.name)], [symbol.type])
     return p
 
 

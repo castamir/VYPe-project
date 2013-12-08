@@ -290,11 +290,7 @@ class Semantic:
         self._labels += 1
         return "endif_%d" % self._labels
 
-    def validate(self, function, args):
-        types = []
-        for instr in args:
-            symbol = self.get_symbol_from_command([instr])
-            types.append(symbol.type)
+    def validate(self, function, types):
         function_arg_types = copy.copy(function.arg_types)
         for t in types:
             try:
