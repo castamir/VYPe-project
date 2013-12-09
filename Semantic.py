@@ -167,7 +167,7 @@ class FunctionTable:
         elif defined != 0:
             given_args = copy.copy(args)
             for expected_type in declaration.arg_types:
-                given_type, name = given_args.pop()
+                given_type, name = given_args.pop(0)
                 if expected_type != given_type:
                     raise InvalidArgumentException(
                         "Invalid argument of function '%s'. Expected '%s', but '%s' given." % (
