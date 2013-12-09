@@ -252,7 +252,7 @@ class Semantic:
 
     def _get_new_label(self):
         self._labels += 1
-        return "$%d" % self._labels
+        return "tm_%d" % self._labels
 
     def check_main_function(self):
         if not "main" in self.function_table.functions:
@@ -297,7 +297,7 @@ class Semantic:
                 ft = function_arg_types.pop(0)
             except IndexError:
                 raise TooManyArgumentsException("Too many arguments. Expected %d, but %d given." % (len(function.arg_types), len(types)))
-            if t != ft:
+            if ft != '*' and t != ft:
                 raise InvalidTypeException("Incompatible type '%s', expected '%s'." % (t, ft))
-        if len(function_arg_types) > 0:
+        if len(function_arg_types) > 0 and not function.has_infinite_args:
             raise TooFewArgumentsException("Too few arguments. Expected %d, but %d given." % (len(function.arg_types), len(types)))
