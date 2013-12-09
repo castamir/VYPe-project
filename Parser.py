@@ -102,6 +102,7 @@ def p_id_list(p):
 ###########################
 def p_function_declaration(p):
     '''function_declaration : type ID LPAREN arg_types RPAREN SEMI
+                            | VOID ID LPAREN arg_types RPAREN SEMI
                             | void_arg_function SEMI'''
     if len(p) == 3:
         type, name, args = p[1]
@@ -129,7 +130,8 @@ def p_arg_types(p):
 # function definition
 ###########################
 def p_void_arg_function(p):
-    '''void_arg_function : type ID LPAREN VOID RPAREN'''
+    '''void_arg_function : type ID LPAREN VOID RPAREN
+                         | VOID ID LPAREN VOID RPAREN'''
     p[0] = (p[1], p[2], None)
     return p
 
@@ -138,7 +140,7 @@ def p_function_definition(p):
     '''function_definition : function_header LBRACE block RBRACE'''
     p[0] = p[1] + p[3]
 
-    if len(p) > 0:
+    if len(p[0]) > 0:
         last_statement = p[0][-1]
         statement, arg2, arg3, arg4 = last_statement
         found = statement == "RETURN"
@@ -149,7 +151,7 @@ def p_function_definition(p):
         function = semantic.get_current_function()
         if function.type == 'void':
             p[0] = p[0] + [('RETURN', None, None, None)]
-        elif function.type == 'int':
+        else:
             symbol = semantic.add_temp_symbol(function.type)
             if function.type == "string":
                 init_value = ""
@@ -293,15 +295,15 @@ def p_block_end(p):
 def p_return(p):
     '''return : RETURN expr SEMI
               | RETURN SEMI'''
+    current_function = semantic.get_current_function()
     if len(p) == 3:
-        if semantic.get_current_function().type == 'void':
-            raise InvalidArgumentException("Void functions cannot return a value.", p.lineno(-1))
+        if current_function.type != 'void':
+            raise InvalidArgumentException("Non-void functions has to return a value.", p.lineno(-1))
         p[0] = [('RETURN', None, None, None)]
     else:
         symbol = semantic.get_symbol_from_command(p[2])
-        current_function = semantic.get_current_function()
-        if current_function.type != 'void':
-            raise InvalidArgumentException("Non-void functions cannot have a non-value return statement.", p.lineno(-1))
+        if current_function.type == 'void':
+            raise InvalidArgumentException("Void functions cannot return a value.", p.lineno(-1))
         if current_function.type != symbol.type:
             raise InvalidArgumentException(
                 "Invalid type of a return value. Expected '%s', but '%s' given" % (current_function.type, symbol.type),
@@ -389,6 +391,9 @@ def p_expr_call(p):
     commands, args = p[3]
 
     semantic.validate(function, args)
+
+    if function.type == 'void':
+        raise SemanticErrorException("Void functions does not return any value.", p.lineno(-1))
 
     symbol = semantic.add_temp_symbol(function.type)
     p[0] = commands + [('CALL', function.name, function.type, symbol.name)]
