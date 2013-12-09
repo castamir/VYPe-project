@@ -1,3 +1,27 @@
-int main(void) {
+int testovaci(void) {
 }
+
+void voidova(void) {
+}
+
+int argumentova(int cislo, char znak, string retezec) {
+}
+
+int deklarovana(int, char);
+
+
+int main(void) {
+    print("hello", "world");
+
+    voidova();
+
+    testovaci();
+
+    argumentova(1, 'h', "hello world");
+
+    deklarovana(5, 'x');
+}
+
+int deklarovana(int cislo, char znak){}
+
 

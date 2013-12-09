@@ -167,7 +167,7 @@ class FunctionTable:
         elif defined != 0:
             given_args = copy.copy(args)
             for expected_type in declaration.arg_types:
-                given_type, name = given_args.pop()
+                given_type, name = given_args.pop(0)
                 if expected_type != given_type:
                     raise InvalidArgumentException(
                         "Invalid argument of function '%s'. Expected '%s', but '%s' given." % (
@@ -296,8 +296,10 @@ class Semantic:
             try:
                 ft = function_arg_types.pop(0)
             except IndexError:
+                if function.has_infinite_args:
+                    continue
                 raise TooManyArgumentsException("Too many arguments. Expected %d, but %d given." % (len(function.arg_types), len(types)))
             if ft != '*' and t != ft:
                 raise InvalidTypeException("Incompatible type '%s', expected '%s'." % (t, ft))
-        if len(function_arg_types) > 0 and not function.has_infinite_args:
+        if len(function_arg_types) > 0:
             raise TooFewArgumentsException("Too few arguments. Expected %d, but %d given." % (len(function.arg_types), len(types)))

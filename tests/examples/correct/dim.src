@@ -1,3 +1,6 @@
 int main(void) {
+    int cislo, druhe_cislo;
+    int treti;
+    int ctvrte;
 }
 

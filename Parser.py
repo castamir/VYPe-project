@@ -24,8 +24,15 @@ semantic = Semantic()
 # Parsing rules
 
 precedence = (
-    ('left', 'OR'), ('left', 'AND'), ('left', 'EQ', 'NE'), ('left', 'LT', 'LE', 'GT', 'GE'), ('left', 'PLUS', 'MINUS'),
-    ('left', 'TIMES', 'DIVIDE', 'MODULO'), ('right', 'NOT'), ('right', 'UMINUS'), ('right', 'FUNCTION'),
+    ('left', 'OR'),
+    ('left', 'AND'),
+    ('left', 'EQ', 'NE'),
+    ('left', 'LT', 'LE', 'GT', 'GE'),
+    ('left', 'PLUS', 'MINUS'),
+    ('left', 'TIMES', 'DIVIDE', 'MODULO'),
+    ('right', 'NOT'),
+    ('right', 'UMINUS'),
+    ('right', 'FUNCTION')
 )
 
 code = {}
@@ -211,6 +218,25 @@ def p_block(p):
     return p
 
 
+def p_block_body(p):
+    '''block_body : block_start block_end'''
+    p[0] = p[2]
+    return p
+
+
+def p_block_start(p):
+    '''block_start : LBRACE'''
+    semantic.symbol_table.push_scope()
+    return p
+
+
+def p_block_end(p):
+    '''block_end : block RBRACE'''
+    p[0] = p[1]
+    semantic.symbol_table.pop_scope()
+    return p
+
+
 def p_statement_list(p):
     '''statement_list : statement_list statement
                       | statement'''
@@ -226,11 +252,33 @@ def p_statement(p):
                  | assignment
                  | return
                  | if_statement
-                 | loop_statement'''
+                 | loop_statement
+                 | function_call'''
     p[0] = p[1]
     return p
 
 
+################################
+# call
+################################
+def p_function_call(p):
+    '''function_call : ID LPAREN expr_list RPAREN SEMI'''
+    function = semantic.get_function(p[1])
+    commands, args = p[3]
+
+    try:
+        semantic.validate(function, args)
+    except SemanticErrorException as e:
+        e.line = p.lineno(-1)
+        raise
+
+    p[0] = commands + [('CALL', function.name, function.type, None)]
+    return p
+
+
+################################
+# loop
+################################
 def p_loop_statement(p):
     '''loop_statement : WHILE LPAREN expr RPAREN block_body'''
     symbol = semantic.get_symbol_from_command(p[3])
@@ -248,6 +296,9 @@ def p_loop_statement(p):
     return p
 
 
+################################
+# if
+################################
 def p_if_statement(p):
     '''if_statement : IF LPAREN expr RPAREN block_body if_false'''
     symbol = semantic.get_symbol_from_command(p[3])
@@ -273,25 +324,9 @@ def p_if_false(p):
     return p
 
 
-def p_block_body(p):
-    '''block_body : block_start block_end'''
-    p[0] = p[2]
-    return p
-
-
-def p_block_start(p):
-    '''block_start : LBRACE'''
-    semantic.symbol_table.push_scope()
-    return p
-
-
-def p_block_end(p):
-    '''block_end : block RBRACE'''
-    p[0] = p[1]
-    semantic.symbol_table.pop_scope()
-    return p
-
-
+################################
+# return
+################################
 def p_return(p):
     '''return : RETURN expr SEMI
               | RETURN SEMI'''
@@ -312,6 +347,9 @@ def p_return(p):
     return p
 
 
+################################
+# assignment
+################################
 def p_assignment(p):
     '''assignment : ID ASSIGN expr SEMI'''
     lsymbol = semantic.get_symbol(p[1])
@@ -324,6 +362,9 @@ def p_assignment(p):
     return p
 
 
+################################
+# expr
+################################
 def p_expr_arithmetic(p):
     '''expr : expr PLUS expr
             | expr MINUS expr
@@ -424,18 +465,20 @@ def p_nonempty_expr_list(p):
 
 
 def p_expr_explicit_retype(p):
-    '''expr : LPAREN type RPAREN LPAREN expr RPAREN'''
+    '''expr : LPAREN type RPAREN expr %prec FUNCTION'''
+    p[0] = p[4]
     symbol = semantic.get_symbol_from_command(p[4])
     new_symbol = semantic.add_temp_symbol(p[2])
-    if symbol.type == 'int' and new_symbol.type == 'char':
-        instruction = 'INT_TO_CHAR'
-    elif symbol.type == 'char' and new_symbol.type == 'string':
-        instruction = 'CHAR_TO_STRING'
-    elif symbol.type == 'char' and new_symbol.type == 'int':
-        instruction = 'CHAR_TO_INT'
-    else:
-        raise InvalidTypeException("Unable to convert '%s' to '%s'." % (symbol.type, new_symbol.type), p.lineno(-1))
-    p[0] = p[4] + [(instruction, symbol.name, None, new_symbol.name)]
+    if symbol.type != new_symbol.type:
+        if symbol.type == 'int' and new_symbol.type == 'char':
+            instruction = 'INT_TO_CHAR'
+        elif symbol.type == 'char' and new_symbol.type == 'string':
+            instruction = 'CHAR_TO_STRING'
+        elif symbol.type == 'char' and new_symbol.type == 'int':
+            instruction = 'CHAR_TO_INT'
+        else:
+            raise InvalidTypeException("Unable to convert '%s' to '%s'." % (symbol.type, new_symbol.type), p.lineno(-1))
+        p[0] += [(instruction, symbol.name, None, new_symbol.name)]
     return p
 
 
@@ -506,7 +549,7 @@ def parse(data, debug=0):
     semantic.add_predefined_function('char', 'read_char')
     semantic.add_predefined_function('int', 'read_int')
     semantic.add_predefined_function('char', 'get_at', ['string', 'int'])
-    semantic.add_predefined_function('char', 'set_at', ['string', 'int', 'char'])
+    semantic.add_predefined_function('string', 'set_at', ['string', 'int', 'char'])
     semantic.add_predefined_function('string', 'strcat', ['string', 'string'])
 
     p = VYPeParser.parse(data, debug=debug)

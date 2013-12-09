@@ -1,3 +1,11 @@
 int main(void) {
+    int cislo;
+    cislo = 5;
+
+    char znak;
+    znak = 'h';
+
+    string slovo;
+    slovo = "hello world";
 }
 

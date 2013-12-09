@@ -1,3 +1,10 @@
 int main(void) {
+    int cislo;
+    char znak;
+    string slovo;
+
+    cislo = 1 == 1;
+    cislo = "prvni" == "druhy";
+    cislo = 'g' > 'h';
 }
 
