@@ -1,3 +1,18 @@
+int testovaci(void) {
+}
+
+void voidova(void) {
+}
+
+int argumentova(int cislo, char znak, string retezec) {
+}
+
+int deklarovana(int, char);
+
+
 int main(void) {
 }
+
+int deklarovana(int cislo, char znak){}
+
 

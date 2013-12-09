@@ -1,3 +1,6 @@
 int main(void) {
+    int cislo;
+    cislo = 1 + 5;
+    cislo = 9 - 8;
 }
 

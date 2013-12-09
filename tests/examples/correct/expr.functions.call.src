@@ -1,3 +1,12 @@
 int main(void) {
+    int cislo;
+    cislo = read_int();
+
+    char znak;
+    znak = get_at("hello world!", 8);
+
+    string retezec;
+    retezec = "hello world!";
+    retezec = set_at(retezec, 6, 'x');
 }
 

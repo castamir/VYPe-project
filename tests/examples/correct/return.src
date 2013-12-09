@@ -1,3 +1,13 @@
+void voidova(void) {
+    return;
+}
+
+int argumentova(int cislo, char znak, string retezec) {
+    return 5;
+}
+
 int main(void) {
 }
+
+
 

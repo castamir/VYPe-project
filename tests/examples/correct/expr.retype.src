@@ -1,3 +1,10 @@
 int main(void) {
+    int cislo;
+    char znak;
+    string retezec;
+
+    retezec = (string) 'h';
+    znak = (char) 555;
+    cislo = (int) 'y';
 }
 
