@@ -424,18 +424,20 @@ def p_nonempty_expr_list(p):
 
 
 def p_expr_explicit_retype(p):
-    '''expr : LPAREN type RPAREN LPAREN expr RPAREN'''
+    '''expr : LPAREN type RPAREN expr %prec FUNCTION'''
+    p[0] = p[4]
     symbol = semantic.get_symbol_from_command(p[4])
     new_symbol = semantic.add_temp_symbol(p[2])
-    if symbol.type == 'int' and new_symbol.type == 'char':
-        instruction = 'INT_TO_CHAR'
-    elif symbol.type == 'char' and new_symbol.type == 'string':
-        instruction = 'CHAR_TO_STRING'
-    elif symbol.type == 'char' and new_symbol.type == 'int':
-        instruction = 'CHAR_TO_INT'
-    else:
-        raise InvalidTypeException("Unable to convert '%s' to '%s'." % (symbol.type, new_symbol.type), p.lineno(-1))
-    p[0] = p[4] + [(instruction, symbol.name, None, new_symbol.name)]
+    if symbol.type != new_symbol.type:
+        if symbol.type == 'int' and new_symbol.type == 'char':
+            instruction = 'INT_TO_CHAR'
+        elif symbol.type == 'char' and new_symbol.type == 'string':
+            instruction = 'CHAR_TO_STRING'
+        elif symbol.type == 'char' and new_symbol.type == 'int':
+            instruction = 'CHAR_TO_INT'
+        else:
+            raise InvalidTypeException("Unable to convert '%s' to '%s'." % (symbol.type, new_symbol.type), p.lineno(-1))
+        p[0] += [(instruction, symbol.name, None, new_symbol.name)]
     return p
 
 
@@ -506,7 +508,7 @@ def parse(data, debug=0):
     semantic.add_predefined_function('char', 'read_char')
     semantic.add_predefined_function('int', 'read_int')
     semantic.add_predefined_function('char', 'get_at', ['string', 'int'])
-    semantic.add_predefined_function('char', 'set_at', ['string', 'int', 'char'])
+    semantic.add_predefined_function('string', 'set_at', ['string', 'int', 'char'])
     semantic.add_predefined_function('string', 'strcat', ['string', 'string'])
 
     p = VYPeParser.parse(data, debug=debug)
