@@ -24,8 +24,15 @@ semantic = Semantic()
 # Parsing rules
 
 precedence = (
-    ('left', 'OR'), ('left', 'AND'), ('left', 'EQ', 'NE'), ('left', 'LT', 'LE', 'GT', 'GE'), ('left', 'PLUS', 'MINUS'),
-    ('left', 'TIMES', 'DIVIDE', 'MODULO'), ('right', 'NOT'), ('right', 'UMINUS'), ('right', 'FUNCTION'),
+    ('left', 'OR'),
+    ('left', 'AND'),
+    ('left', 'EQ', 'NE'),
+    ('left', 'LT', 'LE', 'GT', 'GE'),
+    ('left', 'PLUS', 'MINUS'),
+    ('left', 'TIMES', 'DIVIDE', 'MODULO'),
+    ('right', 'NOT'),
+    ('right', 'UMINUS'),
+    ('right', 'FUNCTION')
 )
 
 code = {}
@@ -211,6 +218,25 @@ def p_block(p):
     return p
 
 
+def p_block_body(p):
+    '''block_body : block_start block_end'''
+    p[0] = p[2]
+    return p
+
+
+def p_block_start(p):
+    '''block_start : LBRACE'''
+    semantic.symbol_table.push_scope()
+    return p
+
+
+def p_block_end(p):
+    '''block_end : block RBRACE'''
+    p[0] = p[1]
+    semantic.symbol_table.pop_scope()
+    return p
+
+
 def p_statement_list(p):
     '''statement_list : statement_list statement
                       | statement'''
@@ -226,11 +252,33 @@ def p_statement(p):
                  | assignment
                  | return
                  | if_statement
-                 | loop_statement'''
+                 | loop_statement
+                 | function_call'''
     p[0] = p[1]
     return p
 
 
+################################
+# call
+################################
+def p_function_call(p):
+    '''function_call : ID LPAREN expr_list RPAREN SEMI'''
+    function = semantic.get_function(p[1])
+    commands, args = p[3]
+
+    try:
+        semantic.validate(function, args)
+    except SemanticErrorException as e:
+        e.line = p.lineno(-1)
+        raise
+
+    p[0] = commands + [('CALL', function.name, function.type, None)]
+    return p
+
+
+################################
+# loop
+################################
 def p_loop_statement(p):
     '''loop_statement : WHILE LPAREN expr RPAREN block_body'''
     symbol = semantic.get_symbol_from_command(p[3])
@@ -248,6 +296,9 @@ def p_loop_statement(p):
     return p
 
 
+################################
+# if
+################################
 def p_if_statement(p):
     '''if_statement : IF LPAREN expr RPAREN block_body if_false'''
     symbol = semantic.get_symbol_from_command(p[3])
@@ -273,25 +324,9 @@ def p_if_false(p):
     return p
 
 
-def p_block_body(p):
-    '''block_body : block_start block_end'''
-    p[0] = p[2]
-    return p
-
-
-def p_block_start(p):
-    '''block_start : LBRACE'''
-    semantic.symbol_table.push_scope()
-    return p
-
-
-def p_block_end(p):
-    '''block_end : block RBRACE'''
-    p[0] = p[1]
-    semantic.symbol_table.pop_scope()
-    return p
-
-
+################################
+# return
+################################
 def p_return(p):
     '''return : RETURN expr SEMI
               | RETURN SEMI'''
@@ -312,6 +347,9 @@ def p_return(p):
     return p
 
 
+################################
+# assignment
+################################
 def p_assignment(p):
     '''assignment : ID ASSIGN expr SEMI'''
     lsymbol = semantic.get_symbol(p[1])
@@ -324,6 +362,9 @@ def p_assignment(p):
     return p
 
 
+################################
+# expr
+################################
 def p_expr_arithmetic(p):
     '''expr : expr PLUS expr
             | expr MINUS expr
