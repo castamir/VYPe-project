@@ -5,7 +5,7 @@ import sys
 from Parser import parse, SyntaxErrorException
 from Semantic import SemanticErrorException
 from Scanner import LexicalErrorException
-#from CodeGenerator import CodeGenerator
+from CodeGenerator import CodeGenerator
 
 
 class RuntimeException(Exception):
@@ -56,11 +56,13 @@ class VYPeProject:
         return tac
 
     def generate_target_program(self, tac):
-        #cg = CodeGenerator()
-        #for line in tac:
-        #    cg.compile(line)
+        cg = CodeGenerator()
+        for line in tac:
+        #    print line
+            cg.compile(line)
         #print cg.program
-        pass
+        with open(self.input_file + ".out", "w") as my_file:
+            my_file.write(cg.program)
 
 
 if __name__ == "__main__":
