@@ -22,6 +22,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
     is_data_segment = None                  #None - no segment started, true - data segment started, False -text segment
     main_started = False
     is_in_func = False                      #if we are in the body of some function
+    parametr_count = 0
 
     def change_segment_type_to_data(self):
         if (self.is_data_segment is None) or not self.is_data_segment:
@@ -128,7 +129,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     def load_variable_to_register(self, varname, register):
         address = self.get_address(varname)
-        self.gen('la $' + register + ',' + address)
+        self.gen('lw $' + register + ',' + address)     #todo string/byte
         self.use_register(register, varname, ForRead)
 
     def gen(self, command):
@@ -191,6 +192,13 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             '!=': 'sne', #sne $r,$s,$t           $t= ($r != $s)              (pseudo)
         }.get(x, None)
 
+    def getreg_param(self, x): #todo check starting number 0/1
+        return {
+            0: 'a0',
+            1: 'a1',
+            2: 'a2',
+            3: 'a3',
+        }.get(x, 'STACK')
 
     def getunop(self, y):
         return {
@@ -221,7 +229,6 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         self.check_temp_var(element)                    #free used temp variables
         #todo STRINGS =
 
-
     def check_temp_var(self, element):
         first, variable1, variable2, forth = element
         if variable1 is not None:
@@ -240,7 +247,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                         self.set_register_in_ta(self.Reg[i][1], None)
                         self.Reg[i] = 'free', None, False
                     else:
-                        if self.AddressTable[j][1][0] == 'gp' and self.AddressTable[j][1][0] is not None:    #pouzit pro globalni
+                        if self.AddressTable[j][1][0] == 'gp' and self.AddressTable[j][1][
+                            0] is not None:    #pouzit pro globalni
                             self.free_register(i)
                         else:                                     #pouzit pro string
                             #if self.is_string_variable(self.Reg[i][1]):
@@ -258,23 +266,79 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                     del self.AddressTable[i]
                     # string constants?
 
-
     def compile(self, element):
         first, second, third, forth = element
         if debug:
             self.gen(';' + str(first) + ',' + str(second) + ',' + str(third) + ',' + str(forth))
 
+        #('ARG', Type, Number, Variable)
+        if first == 'ARG':
+            r = self.getreg_param(third)
+            if second == 'int':
+                self.change_segment_type_to_text()
+                if r != 'STACK':
+                    self.Reg[r] = 'used', forth, False
+                    self.AddressTable[len(self.AddressTable)] = 'memory', None, r, forth   #save information in TA about parametr
+                else:
+                    #todo read from stack
+                    pass
+            #if second == 'byte':
+            #    self.change_segment_type_to_text()
+            #    if r != 'STACK':
+            #        #todo read from ai
+            #        pass
+            #    else:
+            #        #todo read from stack
+            #        pass
+            #if second == 'string':
+            #    self.change_segment_type_to_data()
+            #    if r != 'STACK':
+            #        #todo read from ai
+            #        pass
+            #    else:
+            #        #todo read from stack
+            #        pass
+
+        #('PARAM', type , none , variable)
+        if first == 'PARAM':
+            param_reg = self.getreg_param(
+                self.parametr_count)          #vybrat registr a0-a3/stack v zavislosti na cisle parametru
+            if second == 'int':
+                self.change_segment_type_to_text()
+                if param_reg != 'STACK':                #davame parametr do registru a0-a3
+                    #todo save registr ai
+                    #put parametr into registr
+                    r = self.getreg(forth, ForRead)     #nacteme potrebnou promenou do registru
+                    self.gen('move $' + param_reg + ' , $' + r) #posuneme do potrebnho registru
+                    #todo optimizivat :)
+                else:                       #davame parametr do stacku 4+
+                    #todo push parametr into stack
+                    pass
+            #todo parametrs byte and string
+            #if second == 'byte':
+            #    self.change_segment_type_to_text()
+            #if second == 'string':
+            #   self.change_segment_type_to_data()
+            if self.parametr_count == 0:                                #jen zaciname predavat parametry
+                #todo save caller-save registers
+                #$t0-$t9 $a0-$a3 $v0-$v1
+                #modify offset
+                pass
+            self.parametr_count += 1
+
         #('FUNCTION', name , none , none)
         if first == 'FUNCTION':
-            #todo save registers all
             self.is_in_func = True
             self.change_segment_type_to_text()
             self.gen(second + ':')
             self.gen('subu $sp, $sp, 8')  # decrement sp to make space to save ra, fp
-            self.gen('sw $fp, 8($sp)')    # save fp
-            self.gen('sw $ra, 4($sp)')    # save ra
+            self.gen('sw $fp, 8($sp)')    # save fp offset =4+4
+            self.gen('sw $ra, 4($sp)')    # save raoffset=4+4+4
             self.gen('addiu $fp, $sp, 8') # set up new fp
-            self.foffset = 8              # sdvig v tekuschem frame. Vsegda nachinajetsa s 8.
+            #todo save $s0-$s7
+            #r kolicestvo sochranennych registrov.
+            roff = 0
+            self.foffset = 8+4 + roff              # sdvig v tekuschem frame.
 
         #('DIM', 'typ', 'value', 'jmeno')
         if first == 'DIM':
@@ -288,7 +352,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                         'gp', self.goffset), r, forth   #save information in TA about variable
                     self.goffset += 4                   #calclate an offset of the next global variable in this segment
                 else:
-                    self.gen('subu $sp, $sp, 4')                        #decrement sp to make space for local variable
+                    self.gen(
+                        'subu $sp, $sp, 4')                        #decrement sp to make space for local variable
                     self.gen('sb $' + r + ',4($sp)')                    #save variable in stack
                     self.AddressTable[len(self.AddressTable)] = 'memory', (
                         'fp', self.foffset), r, forth   #save information in TA about variable
@@ -298,13 +363,14 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.change_segment_type_to_text()
                 r = self.getreg(forth, ForWrite)                    #find register for storing variable
                 self.gen('li $' + r + ', ' + str(third))            #load value in this register
-                if self.is_global():
+                if self.is_global():    #todo check global
                     self.gen('sw $' + r + ',' + str(self.goffset) + '($gp)')
                     self.AddressTable[len(self.AddressTable)] = 'memory', (
                         'gp', self.goffset), r, forth   #save information in TA about variable
                     self.goffset += 4                   #calclate an offset of the next global variable in this segment
                 else:
-                    self.gen('subu $sp, $sp, 4')                        #decrement sp to make space for local variable
+                    self.gen(
+                        'subu $sp, $sp, 4')                        #decrement sp to make space for local variable
                     self.gen('sw $' + r + ',4($sp)')                    #save variable in stack
                     self.AddressTable[len(self.AddressTable)] = 'memory', (
                         'fp', self.foffset), r, forth           #save information in TA about variable
@@ -327,7 +393,47 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             self.compile_un_op(element)
 
         #LOOP
+        #('LABEL', None, None, label_loop_start)
+        #('=', podminka, None, vyraz)
+        #('JZ', podminka, None, label_loop_end)
+        #body
+        #('JUMP', None, None, label_loop_start)
+        #('LABEL', None, None, label_loop_end)
+
+        if first == 'JZ':
+            self.change_segment_type_to_text()
+            r = self.getreg(second, ForRead)
+            self.ClearRegistersBeforeJump()
+            self.gen('beq $'+r+',$zero, '+forth)
+
         #IF
+        #('JNZ', podminka, none, Label1)
+        #else
+        #podminka==0
+        #('JUMP',none,none, label2)
+        #('LABEL',none,none, label1)
+        #then
+        #podminka!=0
+        #('LABEL',none,none, label2)
+
+        #('LABEL',None,None,labelname)
+        if first == 'LABEL':
+            self.change_segment_type_to_text()
+            self.ClearRegistersBeforeJump()
+            self.gen(forth+':')
+
+        #('JUMP', None, None, labelname)
+        if first == 'JUMP':
+            self.change_segment_type_to_text()
+            self.ClearRegistersBeforeJump()
+            self.gen('j '+forth)
+
+        #('JNZ', variable, None, labelname)
+        if first == 'JNZ':
+            self.change_segment_type_to_text()
+            r = self.getreg(second, ForRead)
+            self.ClearRegistersBeforeJump()
+            self.gen('bne $'+r+',$zero, '+forth)
 
         #(RETURN,variable,none,none)
         if first == 'RETURN':
@@ -386,6 +492,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
         #(CALL, name, type , result)
         if first == 'CALL':
+            self.parametr_count = 0     #po volani funkce zaciname szitat parametry zase od zacatku
+            #todo jestli nado clear
             self.ClearRegistersBeforeJump()
             self.gen('jal ' + second)
             if forth is not None:
@@ -395,9 +503,13 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     #Save content of registers. Synchs the contents of registers with variables in memory
     def ClearRegistersBeforeJump(self):
+        if debug:
+            self.gen('start synchronize registers with memory')
         for i in list_reg:
             if self.Reg[i][2]:
                 self.free_register(i)
+        if debug:
+            self.gen('end synchronize registers with memory')
 
     def GenerateProgram(self, tac):
         for line in tac:

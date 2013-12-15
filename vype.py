@@ -56,16 +56,22 @@ class VYPeProject:
         return tac
 
     def generate_target_program(self, tac):
-        #cg = CodeGenerator()
-        #for line in tac:
-        #    cg.compile(line)
+        cg = CodeGenerator()
+        for line in tac:
+        #    print line
+            cg.compile(line)
         #print cg.program
-
-        cg1 = CodeGenerator()
-        cg1.GenerateProgram(tac)
-        print '\n'
-        print cg1.program
-        pass
+#<<<<<<< HEAD
+#
+#        cg1 = CodeGenerator()
+#        cg1.GenerateProgram(tac)
+#        print '\n'
+#        print cg1.program
+#        pass
+#=======
+        with open(self.input_file + ".a", "w") as my_file:
+            my_file.write(cg.program)
+#>>>>>>> 9757f9ebba8c75601d5736ae45bb15e27e63361d
 
 
 if __name__ == "__main__":
