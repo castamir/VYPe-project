@@ -1,3 +1,7 @@
+int test(int x, int y) {
+    return x+y;
+}
+
 int main(void) {
     int cislo;
     cislo = read_int();
@@ -8,5 +12,7 @@ int main(void) {
     string retezec;
     retezec = "hello world!";
     retezec = set_at(retezec, 6, 'x');
+
+    cislo = test(5, test(6,7));
 }
 

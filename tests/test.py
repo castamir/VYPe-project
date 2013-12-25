@@ -19,7 +19,7 @@ tests = {
 print separator, "\ntesting started\n", separator
 for expected in tests:
     mypath, description = tests[expected]
-    files = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+    files = [f for f in listdir(mypath) if isfile(join(mypath, f)) and f.endswith(".src")]
     for filename in files:
         total += 1
         message = "Testing:" + filename
