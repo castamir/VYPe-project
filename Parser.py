@@ -272,7 +272,18 @@ def p_function_call(p):
         e.line = p.lineno(-1)
         raise
 
-    p[0] = commands + [('CALL', function.name, function.type, None)]
+    # adding param number to simplify the decision where params belong to
+    fixed_commands = []
+    params = 0
+    for c in commands:
+        op, p1, p2, p3 = c
+        if op == "PARAM":
+            c = (op, p1, params, p3)
+            params += 1
+            print c
+        fixed_commands.append(c)
+
+    p[0] = fixed_commands + [('CALL', function.name, function.type, None)]
     return p
 
 
