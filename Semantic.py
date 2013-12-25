@@ -303,3 +303,14 @@ class Semantic:
                 raise InvalidTypeException("Incompatible type '%s', expected '%s'." % (t, ft))
         if len(function_arg_types) > 0:
             raise TooFewArgumentsException("Too few arguments. Expected %d, but %d given." % (len(function.arg_types), len(types)))
+
+    def add_param_order_to_commands(self, commands):
+        fixed_commands = []
+        params = 1
+        for c in commands:
+            op, p1, p2, p3 = c
+            if op == "PARAM" and p2 is None:
+                c = (op, p1, params, p3)
+                params += 1
+            fixed_commands.append(c)
+        return fixed_commands
