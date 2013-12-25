@@ -272,7 +272,10 @@ def p_function_call(p):
         e.line = p.lineno(-1)
         raise
 
-    p[0] = commands + [('CALL', function.name, function.type, None)]
+    # adding param number to simplify the decision where params belong to
+    fixed_commands = semantic.add_param_order_to_commands(commands)
+
+    p[0] = fixed_commands + [('CALL', function.name, function.type, None)]
     return p
 
 
@@ -436,8 +439,11 @@ def p_expr_call(p):
     if function.type == 'void':
         raise SemanticErrorException("Void functions does not return any value.", p.lineno(-1))
 
+    # adding param number to simplify the decision where params belong to
+    fixed_commands = semantic.add_param_order_to_commands(commands)
+
     symbol = semantic.add_temp_symbol(function.type)
-    p[0] = commands + [('CALL', function.name, function.type, symbol.name)]
+    p[0] = fixed_commands + [('CALL', function.name, function.type, symbol.name)]
     return p
 
 
