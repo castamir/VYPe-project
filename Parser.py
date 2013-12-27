@@ -191,7 +191,7 @@ def p_function_header(p):
         for arg in args:
             args_counter += 1
             type, name = arg
-            p[0].append(('ARG', type, args_counter, name))
+            p[0].append(('ARG', type, args_counter, "x%s" % name))
     return p
 
 
