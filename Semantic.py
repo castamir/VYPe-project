@@ -56,10 +56,13 @@ class SymbolTable(list):
         self.scope.pop()
         self.current = self.scope[-1]
 
-    def add(self, name, type):
+    def add(self, name, type, rename=True):
         if name in self.current:
             raise AlreadyDefinedException("Identifier '%s' is already defined" % name)
-        self.current[name] = Symbol(name, type)
+        if rename:
+            self.current[name] = Symbol("x%s" % name, type)
+        else:
+            self.current[name] = Symbol(name, type)
         return self.current[name]
 
     def get(self, name):
@@ -188,26 +191,6 @@ class Function:
         return True
 
 
-if __name__ == "__main__":
-    table = SymbolTable()
-    table.add('variable1', 'string')
-    print table
-    symbol = table.get('variable1')
-    print "Type of a variable '%s' is '%s'" % (symbol.name, symbol.type)
-    table.push_scope()
-    table.add('variable1', 'int')
-    table.add('vefunkci', 'int')
-    table.add('vefunkci2', 'char')
-    table.add('vefunkci1', 'char')
-    print table
-    symbol = table.get('variable1')
-    print "Type of a variable '%s' is '%s'" % (symbol.name, symbol.type)
-    table.pop_scope()
-    print table
-    symbol = table.get('variable1')
-    print "Type of a variable '%s' is '%s'" % (symbol.name, symbol.type)
-
-
 class Semantic:
     def __init__(self):
         self._labels = 0
@@ -227,10 +210,10 @@ class Semantic:
 
     def add_temp_symbol(self, type):
         name = self._get_new_label()
-        return self.add_symbol(name, type)
+        return self.add_symbol(name, type, False)
 
-    def add_symbol(self, name, type):
-        return self.symbol_table.add(name, type)
+    def add_symbol(self, name, type, rename=True):
+        return self.symbol_table.add(name, type, rename)
 
     def add_function(self, type, name, args=None, infinite=False):
         self.function_table.add(name, type, args, infinite)
