@@ -200,6 +200,8 @@ class Semantic:
 
     def get_symbol_from_command(self, commands):
         op, op1, op2, name = commands[-1]
+        if not name.startswith("tm_"):
+            name = name[1:]
         return self.get_symbol(name)
 
     def get_symbol(self, name):
