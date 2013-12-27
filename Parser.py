@@ -77,11 +77,11 @@ def p_variable_declaration(p):
         init_value = 0
     for name in p[2]:
         try:
-            semantic.add_symbol(name, type)
+            param = semantic.add_symbol(name, type)
         except AlreadyDefinedException as e:
             e.line = p.lineno(-1)
             raise
-        p[0].append(('DIM', p[1], init_value, name))
+        p[0].append(('DIM', p[1], init_value, param.name))
     return p
 
 
@@ -167,6 +167,7 @@ def p_function_definition(p):
             else:
                 init_value = 0
             p[0] = p[0] + [('TEMP', function.type, init_value, symbol.name), ('RETURN', symbol.name, None, None)]
+    p[0] += [('ENDFUNC', None, None, None)]
 
     semantic.end_function_scope()
     return p

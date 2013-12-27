@@ -4,6 +4,11 @@ int main(void) {
 
     char znak;
     znak = 'h';
+    znak = '\n';
+    znak = '\t';
+    znak = '\\';
+    znak = '\'';
+    znak = '\"';
 
     string slovo;
     slovo = "hello world";

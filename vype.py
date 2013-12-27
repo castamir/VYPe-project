@@ -58,7 +58,7 @@ class VYPeProject:
     def generate_target_program(self, tac):
         cg = CodeGenerator()
         for line in tac:
-        #    print line
+            print line
             cg.compile(line)
         #print cg.program
 #<<<<<<< HEAD

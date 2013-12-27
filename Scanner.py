@@ -59,9 +59,14 @@ def t_CSTRING(t):
 
 # Character constant 'c'
 def t_CCHAR(t):
-    r'\'([^\\\n]|(\\.))*?\''
+    r'\'[\\]?.\''
     t.value = t.value[1:-1]
-    # TODO check printable or escaped charater
+    if len(t.value) == 2:
+        t.value = t.value.decode("string-escape")
+    if t.value not in ['\n', '\t', '\\', '\'', '\"'] and ord(t.value) <= 31:
+        raise LexicalErrorException("Invalid character. ASCII value of '%s' (%d) <= 31 or equal to 34 or 39." % (
+            t.value, ord(t.value)), t.lineno)
+    t.value = hex(ord(t.value))
     return t
 
 # Integer literal
