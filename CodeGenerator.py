@@ -224,7 +224,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         self.gen('.org 0')
         self.gen('nop')
         self.gen('nop')
-        self.gen('addiu $sp, $0, 0x4000')
+        self.gen('addiu $29, $0, 0x4000')
         self.gen('jal main')
         self.gen('nop')
         self.gen('break')
@@ -263,6 +263,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             'NOT': 'not', # not $r,$s           $r=!$s                      (pseudo)
             '=': 'move', # move $r,$s          $r=$s                       (pseudo)
             'UMINUS': 'neg', # neg $r,$s           $r=-$s                      (pseudo)
+            'CHAR_TO_INT': 'move',
         }.get(y, None)
 
     def compile_bin_operation(self, element):
@@ -288,7 +289,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             self.check_temp_var(element)                    # free used temp variables
         else:
             pass
-        # todo STRINGS =
+            # todo STRINGS =
 
     def is_temp_variable(self, variable):
         if string.find(variable, 'tm_') == 0:
@@ -412,7 +413,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         if first == 'PARAM':
             self.parametrs[len(self.parametrs)] = element
             #save to the memory
-            self.synch_variable_value_with_memory(forth)
+      #      self.synch_variable_value_with_memory(forth)
 
         #('FUNCTION', name , none , none)
         if first == 'FUNCTION':
@@ -473,11 +474,11 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.Reg[r] = 'used', forth, False
             if second == 'string': #todo check to work
                 r = self.getreg(forth, ForWrite)
-                self.gen('la $'+r+', tm_empty_string')
+                self.gen('la $' + r + ', tm_empty_string')
                 self.gen('subu $29, $29, 4')                        # decrement sp to make space for local variable
                 self.gen('sw $' + r + ',4($29)')                    # save address of the string_variable in stack
                 self.AddressTable[len(self.AddressTable)] = 'string', (
-                        '30', self.foffset), r, forth               # save information in TA about variable
+                    '30', self.foffset), r, forth               # save information in TA about variable
                 self.foffset += 4                   # calculate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth, False
 
@@ -604,6 +605,19 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                     self.gen('move $' + r1 + ',$2')
                     self.use_register(r1, forth, ForWrite)
 
+        if first == 'INT_TO_CHAR':
+            # forth bude vzdy nova temporalni promena
+            temp_element = 'TEMP', 'int', 255, second+'_'
+            self.compile(temp_element)
+           # t = self.getreg(second, ForRead)
+            temp_element = '&&', second,  second+'_', forth
+            self.compile_bin_operation(temp_element)
+
+        if first == 'CHAR_TO_STRING':
+            pass
+            #todo strings
+
+
     def do_vestavena_funkce(self, element):
         first, second, third, forth = element
         if second == 'print':
@@ -620,16 +634,16 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                     self.gen('PRINT_STRING $' + r)
         if second == 'read_int':
             r = self.getreg(forth, ForWrite)
-            self.gen('READ_INT $'+r)
+            self.gen('READ_INT $' + r)
             self.use_register(r, forth, ForWrite)
         if second == 'read_char':
             r = self.getreg(forth, ForWrite)
-            self.gen('READ_CHAR $'+r)
+            self.gen('READ_CHAR $' + r)
             self.use_register(r, forth, ForWrite)
         if second == 'read_string':
             r = self.getreg(forth, ForWrite)
             #todo strings
-            self.gen('READ_string $'+r)
+            self.gen('READ_string $' + r)
             self.use_register(r, forth, ForWrite)
         if second == 'get_at':  #todo getat
             #r = self.getreg(forth, ForWrite)
@@ -644,7 +658,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         if second == 'strcat':
             pass
             #todo strcat
-    
+
     # Save content of registers. Synchs the content of registers with variables in memory
     def ClearRegistersBeforeJump(self):
         if debug:

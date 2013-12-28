@@ -69,7 +69,7 @@ class VYPeProject:
 #        print cg1.program
 #        pass
 #=======
-        with open(self.input_file + ".a", "w") as my_file:
+        with open(self.input_file + ".asm", "w") as my_file:
             my_file.write(cg.program)
 #>>>>>>> 9757f9ebba8c75601d5736ae45bb15e27e63361d
 
