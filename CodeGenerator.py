@@ -7,9 +7,11 @@ import string
 # forth je vysledek
 # .globl visible outside the module
 #todo Bytes instead of int lw  - > lb , sw - > sb apod
-list_reg = ['zero', 'at', 'v0', 'v1', 'a0', 'a1', 'a2', 'a3', 'k0', 'k1', 'gp', 'sp',
-            'fp', 'ra', 't0', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9', 's0', 's1', 's2', 's3', 's4', 's5',
-            's6', 's7']
+#list_reg = ['zero', 'at', 'v0', 'v1', 'a0', 'a1', 'a2', 'a3', 'k0', 'k1', 'gp', 'sp',
+#            'fp', 'ra', 't0', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9', 's0', 's1', 's2', 's3', 's4', 's5',
+#            's6', 's7']
+list_reg = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18',
+            '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31']
 list_reg_param = ['a0', 'a1', 'a2', 'a3']
 ForRead = 'read'
 ForWrite = 'write'
@@ -53,8 +55,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
     def is_global_variable(self, variable):
         for i in range(len(self.AddressTable)):
             if self.AddressTable[i][3] == variable:
-                if self.AddressTable[i][1] is not None:
-                    if (self.AddressTable[i][1][1] is not None) and self.AddressTable[i][1][0] == 'gp':
+                if self.AddressTable[i][1] is not None:         # gp 28
+                    if (self.AddressTable[i][1][1] is not None) and self.AddressTable[i][1][0] == '28':
                         return True
         return False
 
@@ -64,7 +66,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         for i in range(len(self.AddressTable)):
             if self.AddressTable[i][3] == variable:
                 if self.AddressTable[i][1] is not None:
-                    if self.AddressTable[i][1][1] is None and self.AddressTable[i][1][0] == 'gp':
+                    if self.AddressTable[i][1][1] is None and self.AddressTable[i][1][0] == '28':
                         return True
         return False
 
@@ -78,14 +80,14 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     #save a new variable stored in the register PREG into the stack
     def save_new_variable_into_stack(self, preg):
-        self.save_word_into_stack(preg)
+        self.save_word_into_stack(preg)                 # fp 30
         self.AddressTable[len(self.AddressTable)] = 'memory', (
-            'fp', self.foffset - 4), None, self.Reg[preg][1]    # save information in TA about variable
+            '30', self.foffset - 4), None, self.Reg[preg][1]    # save information in TA about variable
 
-    #save word into stack
+    #save word into stack                               #sp 29
     def save_word_into_stack(self, preg):
-        self.gen('subu $sp, $sp, 4')                    # decrement sp to make space for word
-        self.gen('sw $' + preg + ',4($sp)')             # save word in stack
+        self.gen('subu $29, $29, 4')                    # decrement sp to make space for word
+        self.gen('sw $' + preg + ',4($29)')             # save word in stack
         self.foffset += 4                               # calculate offset of the next word in this segment
 
     # synchronise value of register with the memory, and then free the register
@@ -156,10 +158,10 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 if self.is_string_variable(varname):  # it is a string in data segment, its name is its address
                     return self.AddressTable[i][3]
                 else:
-                    if self.AddressTable[i][1][0] == 'fp':  # variable is in a current frame
-                        return str(-self.AddressTable[i][1][1]) + '($fp)'
+                    if self.AddressTable[i][1][0] == '30':  # variable is in a current frame
+                        return str(-self.AddressTable[i][1][1]) + '($30)'
                     else:   # variable is in a global segment
-                        return str(self.AddressTable[i][1][1]) + '($gp)'
+                        return str(self.AddressTable[i][1][1]) + '($28)'
         return None     # didnt find a variable in the TA
 
     def set_register_in_ta(self, varname, register):    # todo renaming of global variables
@@ -181,38 +183,38 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     def __init__(self):
         self.program = ''
-        self.Reg['zero'] = 'reserved', None, False
-        self.Reg['at'] = 'reserved', None, False
-        self.Reg['v0'] = 'reserved', None, False
-        self.Reg['v1'] = 'reserved', None, False
-        self.Reg['a0'] = 'reserved', None, False
-        self.Reg['a1'] = 'reserved', None, False
-        self.Reg['a2'] = 'reserved', None, False
-        self.Reg['a3'] = 'reserved', None, False
-        self.Reg['k0'] = 'reserved', None, False
-        self.Reg['k1'] = 'reserved', None, False
-        self.Reg['gp'] = 'reserved', None, False
-        self.Reg['sp'] = 'reserved', None, False
-        self.Reg['fp'] = 'reserved', None, False
-        self.Reg['ra'] = 'reserved', None, False
-        self.Reg['t0'] = 'free', None, False
-        self.Reg['t1'] = 'free', None, False
-        self.Reg['t2'] = 'free', None, False
-        self.Reg['t3'] = 'free', None, False
-        self.Reg['t4'] = 'free', None, False
-        self.Reg['t5'] = 'free', None, False
-        self.Reg['t6'] = 'free', None, False
-        self.Reg['t7'] = 'free', None, False
-        self.Reg['t8'] = 'free', None, False
-        self.Reg['t9'] = 'free', None, False
-        self.Reg['s0'] = 'free', None, False
-        self.Reg['s1'] = 'free', None, False
-        self.Reg['s2'] = 'free', None, False
-        self.Reg['s3'] = 'free', None, False
-        self.Reg['s4'] = 'free', None, False
-        self.Reg['s5'] = 'free', None, False
-        self.Reg['s6'] = 'free', None, False
-        self.Reg['s7'] = 'free', None, False
+        self.Reg['0'] = 'reserved', None, False
+        self.Reg['1'] = 'reserved', None, False
+        self.Reg['2'] = 'reserved', None, False
+        self.Reg['3'] = 'reserved', None, False
+        self.Reg['4'] = 'reserved', None, False
+        self.Reg['5'] = 'reserved', None, False
+        self.Reg['6'] = 'reserved', None, False
+        self.Reg['7'] = 'reserved', None, False
+        self.Reg['26'] = 'reserved', None, False
+        self.Reg['27'] = 'reserved', None, False
+        self.Reg['28'] = 'reserved', None, False
+        self.Reg['29'] = 'reserved', None, False
+        self.Reg['30'] = 'reserved', None, False
+        self.Reg['31'] = 'reserved', None, False
+        self.Reg['8'] = 'free', None, False
+        self.Reg['9'] = 'free', None, False
+        self.Reg['10'] = 'free', None, False
+        self.Reg['11'] = 'free', None, False
+        self.Reg['12'] = 'free', None, False
+        self.Reg['13'] = 'free', None, False
+        self.Reg['14'] = 'free', None, False
+        self.Reg['15'] = 'free', None, False
+        self.Reg['24'] = 'free', None, False
+        self.Reg['25'] = 'free', None, False
+        self.Reg['16'] = 'free', None, False
+        self.Reg['17'] = 'free', None, False
+        self.Reg['18'] = 'free', None, False
+        self.Reg['19'] = 'free', None, False
+        self.Reg['20'] = 'free', None, False
+        self.Reg['21'] = 'free', None, False
+        self.Reg['22'] = 'free', None, False
+        self.Reg['23'] = 'free', None, False
         self.pc = 0
         # self.gen('.text')
         # self.gen('main:')
@@ -237,10 +239,10 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     def getreg_param(self, x):
         return {
-            1: 'a0',
-            2: 'a1',
-            3: 'a2',
-            4: 'a3',
+            1: '4',
+            2: '5',
+            3: '6',
+            4: '7',
         }.get(x, 'STACK')
 
     def getunop(self, y):
@@ -308,7 +310,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         # fp relative delete
         for i in range(len(self.AddressTable)):
             if self.AddressTable[i][1] is not None:         # ma pamet
-                if self.AddressTable[i][1][0] == 'fp':      # pamet je ve staku
+                if self.AddressTable[i][1][0] == '30':      # pamet je ve staku
                     del self.AddressTable[i]
 
     #clears TR. Erase all registers, except holding global
@@ -364,7 +366,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     def read_next_arg_stack(self, variable):
         self.AddressTable[len(self.AddressTable)] = 'memory', (
-            'fp', self.arg_offset), None, variable   # save information in TA about the variable
+            '30', self.arg_offset), None, variable   # save information in TA about the variable
         self.arg_offset -= 4
 
     def compile(self, element):
@@ -402,10 +404,10 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             self.arg_offset = -4
             self.change_segment_type_to_text()
             self.gen(second + ':')
-            self.gen('subu $sp, $sp, 8')  # decrement sp to make space to save ra, fp
-            self.gen('sw $fp, 8($sp)')    # save fp offset =0
-            self.gen('sw $ra, 4($sp)')    # save ra offset =4
-            self.gen('addiu $fp, $sp, 8') # set up new fp
+            self.gen('subu $29, $29, 8')  # decrement sp to make space to save ra, fp
+            self.gen('sw $30, 8($29)')    # save fp offset =0
+            self.gen('sw $31, 4($29)')    # save ra offset =4
+            self.gen('addiu $30, $29, 8') # set up new fp
             #todo save $s0-$s7
             #r kolicestvo sochranennych registrov.
             # offset 0 -used, offset 4 used, offset 8 free
@@ -425,15 +427,15 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.gen('li $' + r + ', ' + str(
                     third))  # self.gen('addiu $' + r + ',$zero,\'' + str(third) + '\'')        # load value in this register
                 if self.is_in_global():     # todo check global
-                    self.gen('sw $' + r + ',' + str(self.goffset) + '($gp)')
+                    self.gen('sw $' + r + ',' + str(self.goffset) + '($28)')
                     self.AddressTable[len(self.AddressTable)] = 'memory', (
-                        'gp', self.goffset), r, forth   # save information in TA about the variable
+                        '28', self.goffset), r, forth   # save information in TA about the variable
                     self.goffset += 4                  # calculate an offset of the next global variable in this segment
                 else:
-                    self.gen('subu $sp, $sp, 4')                        # decrement sp to make space for local variable
-                    self.gen('sw $' + r + ',4($sp)')                    # save variable in stack
+                    self.gen('subu $29, $29, 4')                        # decrement sp to make space for local variable
+                    self.gen('sw $' + r + ',4($29)')                    # save variable in stack
                     self.AddressTable[len(self.AddressTable)] = 'memory', (
-                        'fp', self.foffset), r, forth   # save information in TA about variable
+                        '30', self.foffset), r, forth   # save information in TA about variable
                     self.foffset += 4                   # calculate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth, False      # use register
             if second == 'int':
@@ -441,23 +443,23 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 r = self.getreg(forth, ForWrite)                    # find register for storing variable
                 self.gen('li $' + r + ', ' + str(third))            # load value in this register
                 if self.is_in_global():    # todo check global
-                    self.gen('sw $' + r + ',' + str(self.goffset) + '($gp)')
+                    self.gen('sw $' + r + ',' + str(self.goffset) + '($28)')
                     self.AddressTable[len(self.AddressTable)] = 'memory', (
-                        'gp', self.goffset), r, forth   # save information in TA about variable
+                        '28', self.goffset), r, forth   # save information in TA about variable
                     self.goffset += 4                   # calclate an offset of the next global variable in this segment
                 else:
                     self.gen(
-                        'subu $sp, $sp, 4')                        # decrement sp to make space for local variable
-                    self.gen('sw $' + r + ',4($sp)')                    # save variable in stack
+                        'subu $29, $29, 4')                        # decrement sp to make space for local variable
+                    self.gen('sw $' + r + ',4($29)')                    # save variable in stack
                     self.AddressTable[len(self.AddressTable)] = 'memory', (
-                        'fp', self.foffset), r, forth           # save information in TA about variable
+                        '30', self.foffset), r, forth           # save information in TA about variable
                     self.foffset = self.foffset + 4           # calclate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth, False
             if second == 'string': #todo check to work
                 self.change_segment_type_to_data()
                 self.gen(forth + ':')
-                self.gen('.asciiz "' + third + '"')  # store a string in a memory
-                self.AddressTable[len(self.AddressTable)] = 'memory', ('gp', None), None, forth # todo add to TA
+                self.gen('.asciz "' + third + '"')  # store a string in a memory
+                self.AddressTable[len(self.AddressTable)] = 'memory', ('28', None), None, forth # todo add to TA
 
         # (BINOPERATION, 'argument1', 'argument2', 'vysledek')
         if self.getbinop(first) is not None:
@@ -510,20 +512,20 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             self.change_segment_type_to_text()
             r = self.getreg(second, ForRead)
             self.ClearRegistersBeforeJump()
-            self.gen('bne $' + r + ',$zero, ' + forth)
+            self.gen('bne $' + r + ',$0, ' + forth)
 
         #(RETURN,variable,none,none)
         if first == 'RETURN':
             self.change_segment_type_to_text()
             if second is not None:
                 r = self.getreg(second, ForRead)                   # find register for storing variable
-                self.free_register('v0')                           # save variable stored in 'v0'
-                self.gen('move $v0, $' + r)
+                self.free_register('2')                           # save variable stored in 'v0'
+                self.gen('move $2, $' + r)
             self.synch_tr_before_return()                          # saves globals/strings
-            self.gen('move $sp, $fp')       # pop stackframe
-            self.gen('lw $ra, -4($fp)')
-            self.gen('lw $fp, 0($fp)')
-            self.gen('jr $ra')
+            self.gen('move $29, $30')       # pop stackframe
+            self.gen('lw $31, -4($30)')
+            self.gen('lw $30, 0($30)')
+            self.gen('jr $31')
 
         #('TEMP', type, value, tempname)
         if first == 'TEMP':
@@ -564,8 +566,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             if (second == 'string'): #todo check to work
                 self.change_segment_type_to_data()
                 self.gen(forth + ':')
-                self.gen('.asciiz "' + third + '"')  # store a string in a memory
-                self.AddressTable[len(self.AddressTable)] = 'memory', ('gp', None), None, forth # todo add to TA
+                self.gen('.asciz "' + third + '"')  # store a string in a memory
+                self.AddressTable[len(self.AddressTable)] = 'memory', ('28', None), None, forth # todo add to TA
 
         #(CALL, name, type , result)
         if first == 'CALL':
@@ -579,7 +581,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 if forth is not None:
                     # todo int char string
                     r1 = self.getreg(forth, ForWrite)
-                    self.gen('move $' + r1 + ',$v0')
+                    self.gen('move $' + r1 + ',$2')
                     self.use_register(r1, forth, ForWrite)
 
     def do_vestavena_funkce(self, element):
@@ -587,7 +589,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         if second == 'print':
             curr_param_list = self.get_curr_param_list()
             for i in reversed(xrange(len(curr_param_list))):
-                if third == 'int':
+                if curr_param_list[i][1] == 'int':
                     pass
 
     # Save content of registers. Synchs the content of registers with variables in memory
