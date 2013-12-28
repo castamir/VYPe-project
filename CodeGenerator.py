@@ -21,13 +21,14 @@ vestavene_funkce = ['print', 'read_char', 'read_string', 'read_int', 'get_at', '
 
 class CodeGenerator:                        # type , Varname , isDifferentFromMemory
     Reg = {}                                # reserved , None  / free, None  /  used , name_of_variable
-    AddressTable = {}                       # ( memory, (segment,offset), registername, namevariable)
+    AddressTable = {}                       # ( None/Length of string, (segment,offset), registername, namevariable)
     goffset = 0                             # indicates an offset in global segment. Always of the first free row
     foffset = 0                             # indicates offsets in segments. Always  of the first free row
     is_data_segment = None                  # None - no segment started, true - data segment started, False -text segment
     main_started = False
     is_in_func = False                      # if we are in the body of some function
     parametrs = {}                          # tuples of paramets
+    buffer_size = 256
     arg_offset = -4
 
     #change a segment to .data
@@ -65,9 +66,14 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
     def is_string_variable(self, variable):
         for i in range(len(self.AddressTable)):
             if self.AddressTable[i][3] == variable:
-                if self.AddressTable[i][1] is not None:
-                    if self.AddressTable[i][1][1] is None and self.AddressTable[i][1][0] == '28':
-                        return True
+                return self.is_string_i(i)
+        return False
+
+    def is_string_i(self, i):
+        if self.AddressTable[i][0] is not None:
+            #if self.AddressTable[i][1] is not None:
+            #    if self.AddressTable[i][1][1] is None and self.AddressTable[i][1][0] == '28':
+            return True
         return False
 
     #modify TR,TA. Indicates that variable is associated with this register
@@ -123,6 +129,11 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         for i in list_reg:
             if self.Reg[i][0] == 'free':
                 return i
+        print 'AllRegisters are used'
+        # todo vybrat iz zanatych kakojto treg
+        # uloz obsah R do pameti a modifikuj TR & TA
+        # rapisat v treg todo
+        #            self.use_register(t, forth)
         return None
 
     def look_variable_in_register(self, varname):
@@ -141,23 +152,19 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         treg = self.look_variable_in_register(varname)
         if treg is None:
             treg = self.find_free_register()
-            if treg is not None:
-                if reason == ForRead:  # load current value, Modify TR, TA
-                    self.load_variable_to_register_from_address(varname, treg)
-                    #todo strings
-            else:
-                print 'AllRegisters are used'
-                # todo vybrat iz zanatych kakojto treg
-                # uloz obsah R do pameti a modifikuj TR & TA
-                # rapisat v treg todo
-                #            self.use_register(t, forth)
+            if reason == ForRead:  # load current value, Modify TR, TA
+                self.load_variable_to_register_from_address(varname, treg)
+                #todo strings
         return treg
 
     def get_address(self, varname):  # todo renaming of global variables
         for i in range(len(self.AddressTable)):
             if self.AddressTable[i][3] == varname:
-                if self.is_string_variable(varname):  # it is a string in data segment, its name is its address
-                    return self.AddressTable[i][3]
+                if self.is_string_variable(varname):  # it is a string
+                    if self.AddressTable[i][1][1] is None:  # string in data
+                        return self.AddressTable[i][3]
+                    else:                                   # string variable in stack
+                        return str(-self.AddressTable[i][1][1]) + '($30)'
                 else:
                     if self.AddressTable[i][1][0] == '30':  # variable is in a current frame
                         return str(-self.AddressTable[i][1][1]) + '($30)'
@@ -175,7 +182,10 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     def load_variable_to_register_from_address(self, varname, register):
         address = self.get_address(varname)
-        self.gen('lw $' + register + ',' + address)     # todo string/byte
+        if self.is_string_variable(varname):
+            self.gen('la $' + register + ',' + address)
+        else:
+            self.gen('lw $' + register + ',' + address)
         self.use_register(register, varname, ForRead)
 
     def gen(self, command):
@@ -220,7 +230,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         self.change_segment_type_to_data()
         self.gen('tm_empty_string' + ':')
         self.gen('.asciz ""')  # store an empty string in a memory
-        self.gen('.text')
+        self.change_segment_type_to_text()
         self.gen('.org 0')
         self.gen('nop')
         self.gen('nop')
@@ -235,19 +245,19 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     def getbinop(self, x):
         return {
-            '+': 'add', # add $r,$s,$t           $r=$s+$t
-            '-': 'sub', # sub $r,$s,$t           $r=$s-$t
-            '*': 'mul', # mul $r,$s,$t           $r=$s*$t (first 32 bits)
-            '/': 'div', # div $s,$t ; mflo $d    quotient                    (pseudo)
-            '%': 'rem', # div $s,$t ; mfhi $d    reminder                    (pseudo)
-            '&&': 'and', # and $r,$s,$t           $t= $r bitwise AND $s
-            '||': 'or', # or  $r,$s,$t           $t= $r bitwise OR $s
-            '<': 'slt', # slt $r,$s,$t           $t= ($r < $s)
-            '==': 'seq', # seq $r,$s,$t           $t= ($r == $s)              (pseudo)
-            '>': 'sgt', # sgt $r,$s,$t           $t= ($r > $s)               (pseudo)
-            '>=': 'sge', # sge $r,$s,$t           $t= ($r >= $s)              (pseudo)
-            '<=': 'sle', # sle $r,$s,$t           $t= ($r <= $s)              (pseudo)
-            '!=': 'sne', # sne $r,$s,$t           $t= ($r != $s)              (pseudo)
+            '+': 'add', # add $t,$s,$r           $t=$s+$r
+            '-': 'sub', # sub $t,$s,$r           $t=$s-$r
+            '*': 'mul', # mul $t,$s,$r           $t=$s*$r (first 32 bits)
+            '/': 'div', # div $s,$r ; mflo $d    quotient                    (pseudo)
+            '%': 'rem', # div $s,$r ; mfhi $d    reminder                    (pseudo)
+            '&&': 'and', # and $t,$s,$r           $t= $r bitwise AND $s
+            '||': 'or', # or  $t,$s,$r           $t= $r bitwise OR $s
+            '<': 'slt', # slt $t,$s,$r           $t= ($s < $r)
+            '==': 'seq', # seq $t,$s,$r           $t= ($r == $s)              (pseudo)
+            '>': 'sgt', # sgt $t,$s,$r           $t= ($s > $r)               (pseudo)
+            '>=': 'sge', # sge $t,$s,$r           $t= ($s >= $r)              (pseudo)
+            '<=': 'sle', # sle $t,$s,$r           $t= ($s <= $r)              (pseudo)
+            '!=': 'sne', # sne $t,$s,$r           $t= ($r != $s)              (pseudo)
         }.get(x, None)
 
     def getreg_param(self, x):
@@ -271,9 +281,57 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         r = self.getreg(second, ForRead)
         s = self.getreg(third, ForRead)
         t = self.getreg(forth, ForWrite)
-        self.gen(self.getbinop(first) + ' $' + t + ',$' + r + ', $' + s)
+        binop = self.getbinop(first)
+        pc_temp = self.pc
+        if binop == 'seq':
+            self.gen('beq $' + s + ',$' + r + ',' + forth + '_' + str(pc_temp))
+            self.gen('ori $' + t + ',$0, 0')
+            self.gen('beq $0 ,$0,' + forth + '_' + str(pc_temp + 1))
+            self.gen(forth + '_' + str(pc_temp) + ':')
+            self.gen('ori $' + t + ',$0, 1')
+            self.gen(forth + '_' + str(pc_temp + 1) + ':')
+        else:
+            if binop == 'sge':
+                self.gen('bne $' + s + ',$' + r + ',' + forth + '_' + str(pc_temp))
+                self.gen('ori $' + t + ',$0, 1')
+                self.gen('beq $0 ,$0,' + forth + '_' + str(pc_temp + 1))
+                self.gen(forth + '_' + str(pc_temp) + ':')
+                self.gen('slt $' + t + ',$' + s + ', $' + r)
+                self.gen(forth + '_' + str(pc_temp + 1) + ':')
+            else:
+                if binop == 'sgt':
+                    self.gen('slt' + ' $' + t + ',$' + s + ', $' + r)
+                else:
+                    if binop == 'sle':
+                        self.gen('bne $' + s + ',$' + r + ',' + forth + '_' + str(pc_temp))
+                        self.gen('ori $' + t + ',$0, 1')
+                        self.gen('beq $0 ,$0,' + forth + '_' + str(pc_temp + 1))
+                        self.gen(forth + '_' + str(pc_temp) + ':')
+                        self.gen('slt $' + t + ',$' + r + ', $' + s)
+                        self.gen(forth + '_' + str(pc_temp + 1) + ':')
+                    else:
+                        if binop == 'sne':
+                            self.gen('beq $' + s + ',$' + r + ',' + forth + '_' + str(pc_temp))
+                            self.gen('ori $' + t + ',$0, 1')
+                            self.gen('beq $0 ,$0,' + forth + '_' + str(pc_temp + 1))
+                            self.gen(forth + '_' + str(pc_temp) + ':')
+                            self.gen('ori $' + t + ',$0, 0')
+                            self.gen(forth + '_' + str(pc_temp + 1) + ':')
+                        else:
+                            if binop == 'rem':
+                            #    self.gen('bne $' + s + ',$0,'+forth+'_'+str(pc_temp))
+                            #    self.gen('break $0')
+                                self.gen('div $' + r + ',$' + s)
+                                self.gen('mfhi $' + t)
+                            else:
+                                if binop == 'div':
+                                    self.gen('div $' + r + ',$' + s)
+                                    self.gen('mflo $' + t)
+                                else:
+                                    self.gen(binop + ' $' + t + ',$' + r + ', $' + s)
         self.use_register(t, forth, ForWrite)
-        self.check_temp_var(element)                    # free used temp variables
+        self.check_temp_var(second)                    # free used temp variables
+        self.check_temp_var(third)                    # free used temp variables
         #todo STRINGS
         # U retezcu se porovnn
         # prov lexikograficky. Vsledkem porovnn je celocseln hodnota 1 (jedna) v prpade
@@ -282,14 +340,67 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
     def compile_un_op(self, element):
         first, second, third, forth = element
         if not self.is_string_variable(forth):
+            self.change_segment_type_to_text()
             r = self.getreg(second, ForRead)
             t = self.getreg(forth, ForWrite)
-            self.gen(self.getunop(first) + ' $' + t + ',$' + r)
+            unop = self.getunop(first)
+            if unop == 'neg':
+                self.gen('sub $' + t + ', $0, $' + r)
+            else:
+                if unop == 'not':
+                    self.gen('nor $' + t + ', $' + r + ', $0')
+                else:
+                    self.gen(unop + ' $' + t + ',$' + r)
             self.use_register(t, forth, ForWrite)
-            self.check_temp_var(element)                    # free used temp variables
+            self.check_temp_var(second)                    # free used temp variabless
         else:
             pass
+            self.change_segment_type_to_data()
+            label_name = forth + str(self.pc)
+            new_len = self.AddressTable[self.look_variable_in_addresstable(second)][0]  # every string is in TA
+            self.gen(label_name + ':')
+            self.gen('.space '+str(self.buffer_size))  # allocate buffer
+            self.AddressTable[len(self.AddressTable)] = new_len, ('28', None), None, label_name  # todo add to TA
+            self.change_segment_type_to_text()
+            self.strcpy(label_name, second)
+            r = self.getreg(forth, ForWrite)
+            self.gen('la $' + r + ',' + label_name)
+            self.use_register(r, forth, ForWrite)
+
             # todo STRINGS =
+
+            # used registers r,s,t
+            #  la $r, finalStr
+            #  la $s, string
+            #copy:
+            #  lb $t, ($s)                   # get character at address
+            #  beqz $t, copy_end              # if it is end of the string jump
+            #  sb $t, ($r)                   # else store current character in the buffer
+            #  addi $s, $s, 1                # string1 pointer points a position forward
+            #  addi $r, $r, 1                # same for finalStr pointer
+            #  j copy                       # loop
+            #copy_end:
+
+    def strcpy(self, finalstr, sourcestr):
+        r = self.getreg(finalstr, ForRead)
+        s = self.getreg(sourcestr, ForRead)
+        t = self.find_free_register()
+        label_name = sourcestr + '_copy_' + str(self.pc)
+        self.gen(label_name + ':')
+        self.gen('lb $' + t + ', ($' + s + ')')
+        self.gen('beqz $' + t + ', ' + label_name + '_end')
+        self.gen('sb $' + t + ', ($' + r + ') ')
+        self.gen('addi $' + s + ', $' + s + ', 1')
+        self.gen('addi $' + r + ', $' + r + ', 1')
+        self.gen('j ' + label_name)
+        self.gen(label_name + '_end:')
+        self.Reg[self.look_variable_in_register(finalstr)] = 'free', None, None
+        a, b, c, d = self.AddressTable[self.look_variable_in_addresstable(finalstr)]
+        self.AddressTable[self.look_variable_in_addresstable(finalstr)] = a, b, None, d
+        self.Reg[self.look_variable_in_register(sourcestr)] = 'free', None, None
+        a, b, c, d = self.AddressTable[self.look_variable_in_addresstable(sourcestr)]
+        self.AddressTable[self.look_variable_in_addresstable(sourcestr)] = a, b, None, d
+
 
     def is_temp_variable(self, variable):
         if string.find(variable, 'tm_') == 0:
@@ -297,14 +408,10 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         else:
             return False
 
-    def check_temp_var(self, element):
-        first, variable1, variable2, forth = element
-        if variable1 is not None:
-            if self.is_temp_variable(variable1):
-                self.Reg[self.look_variable_in_register(variable1)] = 'free', None, False
-        if variable2 is not None:
-            if self.is_temp_variable(variable2):
-                self.Reg[self.look_variable_in_register(variable2)] = 'free', None, False
+    def check_temp_var(self, variable):
+        if variable is not None:
+            if self.is_temp_variable(variable):
+                self.Reg[self.look_variable_in_register(variable)] = 'free', None, False
 
     #synchs TR before return, saves only global variables and strings
     def synch_tr_before_return(self):
@@ -413,7 +520,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         if first == 'PARAM':
             self.parametrs[len(self.parametrs)] = element
             #save to the memory
-      #      self.synch_variable_value_with_memory(forth)
+            #      self.synch_variable_value_with_memory(forth)
 
         #('FUNCTION', name , none , none)
         if first == 'FUNCTION':
@@ -445,13 +552,13 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                     third))  # self.gen('addiu $' + r + ',$zero,\'' + str(third) + '\'')        # load value in this register
                 if self.is_in_global():     # todo check global
                     self.gen('sw $' + r + ',' + str(self.goffset) + '($28)')
-                    self.AddressTable[len(self.AddressTable)] = 'memory', (
+                    self.AddressTable[len(self.AddressTable)] = None, (
                         '28', self.goffset), r, forth   # save information in TA about the variable
                     self.goffset += 4                  # calculate an offset of the next global variable in this segment
                 else:
                     self.gen('subu $29, $29, 4')                        # decrement sp to make space for local variable
                     self.gen('sw $' + r + ',4($29)')                    # save variable in stack
-                    self.AddressTable[len(self.AddressTable)] = 'memory', (
+                    self.AddressTable[len(self.AddressTable)] = None, (
                         '30', self.foffset), r, forth   # save information in TA about variable
                     self.foffset += 4                   # calculate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth, False      # use register
@@ -461,23 +568,23 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.gen('li $' + r + ', ' + str(third))            # load value in this register
                 if self.is_in_global():    # todo check global
                     self.gen('sw $' + r + ',' + str(self.goffset) + '($28)')
-                    self.AddressTable[len(self.AddressTable)] = 'memory', (
+                    self.AddressTable[len(self.AddressTable)] = None, (
                         '28', self.goffset), r, forth   # save information in TA about variable
                     self.goffset += 4                   # calclate an offset of the next global variable in this segment
                 else:
                     self.gen(
                         'subu $29, $29, 4')                        # decrement sp to make space for local variable
                     self.gen('sw $' + r + ',4($29)')                    # save variable in stack
-                    self.AddressTable[len(self.AddressTable)] = 'memory', (
+                    self.AddressTable[len(self.AddressTable)] = None, (
                         '30', self.foffset), r, forth           # save information in TA about variable
-                    self.foffset = self.foffset + 4           # calclate offset of the next local variable in this segment
+                    self.foffset = self.foffset + 4           # calculate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth, False
-            if second == 'string': #todo check to work
+            if second == 'string':                          # value is in data segment, address is in register/stack
                 r = self.getreg(forth, ForWrite)
                 self.gen('la $' + r + ', tm_empty_string')
                 self.gen('subu $29, $29, 4')                        # decrement sp to make space for local variable
                 self.gen('sw $' + r + ',4($29)')                    # save address of the string_variable in stack
-                self.AddressTable[len(self.AddressTable)] = 'string', (
+                self.AddressTable[len(self.AddressTable)] = 0, (
                     '30', self.foffset), r, forth               # save information in TA about variable
                 self.foffset += 4                   # calculate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth, False
@@ -489,7 +596,6 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
         #('UNARYOPERATION', varname, None, vysledek)
         if self.getunop(first) is not None:
-            self.change_segment_type_to_text()
             self.compile_un_op(element)
 
         #LOOP
@@ -550,7 +656,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
         #('TEMP', type, value, tempname)
         if first == 'TEMP':
-            if second == 'char':  # todo it is byte! how does it work
+            if second == 'char':
                 self.change_segment_type_to_text()
                 r = self.getreg(forth, ForWrite)                    # find register for storing variable
                 self.gen('li $' + r + ', ' + str(third))        # load value in this register
@@ -588,7 +694,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.change_segment_type_to_data()
                 self.gen(forth + ':')
                 self.gen('.asciz "' + third + '"')  # store a string in a memory
-                self.AddressTable[len(self.AddressTable)] = 'memory', ('28', None), None, forth # todo add to TA
+                self.AddressTable[len(self.AddressTable)] = len(third), ('28', None), None, forth # todo add to TA
 
         #(CALL, name, type , result)
         if first == 'CALL':
@@ -607,10 +713,10 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
         if first == 'INT_TO_CHAR':
             # forth bude vzdy nova temporalni promena
-            temp_element = 'TEMP', 'int', 255, second+'_'
+            temp_element = 'TEMP', 'int', 255, second + '_'
             self.compile(temp_element)
-           # t = self.getreg(second, ForRead)
-            temp_element = '&&', second,  second+'_', forth
+            # t = self.getreg(second, ForRead)
+            temp_element = '&&', second, second + '_', forth
             self.compile_bin_operation(temp_element)
 
         if first == 'CHAR_TO_STRING':
@@ -632,6 +738,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 if curr_param_list[i][1] == 'string':  #todo strings
                     r = self.getreg(curr_param_list[i][3], ForRead)
                     self.gen('PRINT_STRING $' + r)
+                self.check_temp_var(curr_param_list[i][3])
         if second == 'read_int':
             r = self.getreg(forth, ForWrite)
             self.gen('READ_INT $' + r)
@@ -642,7 +749,6 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             self.use_register(r, forth, ForWrite)
         if second == 'read_string':
             r = self.getreg(forth, ForWrite)
-            #todo strings
             self.gen('READ_string $' + r)
             self.use_register(r, forth, ForWrite)
         if second == 'get_at':  #todo getat
@@ -664,8 +770,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         if debug:
             self.gen('start synchronize registers with memory')
         for i in list_reg:
-            if self.Reg[i][2]:
-                self.free_register(i)
+            self.free_register(i)
+
         if debug:
             self.gen('end synchronize registers with memory')
 
