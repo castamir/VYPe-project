@@ -49,10 +49,10 @@ class VYPeProject:
     def parse(data):
         tac = parse(data)
         #debug prints
-        if tac is not None:
-            for line in tac:
-                pass
-                print line
+        #if tac is not None:
+        #    for line in tac:
+        #        pass
+        #        print line
         return tac
 
     def generate_target_program(self, tac):

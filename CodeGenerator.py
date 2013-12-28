@@ -14,6 +14,7 @@ list_reg_param = ['a0', 'a1', 'a2', 'a3']
 ForRead = 'read'
 ForWrite = 'write'
 debug = False
+vestavene_funkce = ['print', 'read_char', 'read_string', 'read_int', 'get_at', 'set_at', 'strcat']
 
 
 class CodeGenerator:                        # type , Varname , isDifferentFromMemory
@@ -25,6 +26,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
     main_started = False
     is_in_func = False                      # if we are in the body of some function
     parametrs = {}                          # tuples of paramets
+    arg_offset = -4
 
     #change a segment to .data
     def change_segment_type_to_data(self):
@@ -76,11 +78,15 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     #save a new variable stored in the register PREG into the stack
     def save_new_variable_into_stack(self, preg):
-        self.gen('subu $sp, $sp, 4')                    # decrement sp to make space for local variable
-        self.gen('sw $' + preg + ',4($sp)')             # save variable in stack todo type checking SW SB
+        self.save_word_into_stack(preg)
         self.AddressTable[len(self.AddressTable)] = 'memory', (
-            'fp', self.foffset), None, self.Reg[preg][1]    # save information in TA about variable
-        self.foffset += 4                               # calculate offset of the next local variable in this segment
+            'fp', self.foffset - 4), None, self.Reg[preg][1]    # save information in TA about variable
+
+    #save word into stack
+    def save_word_into_stack(self, preg):
+        self.gen('subu $sp, $sp, 4')                    # decrement sp to make space for word
+        self.gen('sw $' + preg + ',4($sp)')             # save word in stack
+        self.foffset += 4                               # calculate offset of the next word in this segment
 
     # synchronise value of register with the memory, and then free the register
     def free_register(self, preg):
@@ -219,7 +225,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             '*': 'mul', # mul $r,$s,$t           $r=$s*$t (first 32 bits)
             '/': 'div', # div $s,$t ; mflo $d    quotient                    (pseudo)
             '%': 'rem', # div $s,$t ; mfhi $d    reminder                    (pseudo)
-            '&&': 'and',  # and $r,$s,$t           $t= $r bitwise AND $s
+            '&&': 'and', # and $r,$s,$t           $t= $r bitwise AND $s
             '||': 'or', # or  $r,$s,$t           $t= $r bitwise OR $s
             '<': 'slt', # slt $r,$s,$t           $t= ($r < $s)
             '==': 'seq', # seq $r,$s,$t           $t= ($r == $s)              (pseudo)
@@ -267,7 +273,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         # todo STRINGS =
 
     def is_temp_variable(self, variable):
-        if string.find(variable,'tm_') == 0:
+        if string.find(variable, 'tm_') == 0:
             return True
         else:
             return False
@@ -281,8 +287,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             if self.is_temp_variable(variable2):
                 self.Reg[self.look_variable_in_register(variable2)] = 'free', None, False
 
-    #clears TR before return, saves only global variables and strings
-    def clear_tr_before_return(self):
+    #synchs TR before return, saves only global variables and strings
+    def synch_tr_before_return(self):
         for i in list_reg:
             if self.Reg[i][0] == 'used':                            # only used registers can be cleared
                 if self.is_global_variable(self.Reg[i][1]):         # if variable is global, then save it
@@ -292,11 +298,12 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 if self.is_string_variable(self.Reg[i][1]):
                     #todo strings
                     pass
-                self.set_register_in_ta(self.Reg[i][1], None)       # modify TA
-                self.Reg[i] = 'free', None, False                   # modify TR
+
+    #            self.set_register_in_ta(self.Reg[i][1], None)       # modify TA
+    #            self.Reg[i] = 'free', None, False                   # modify TR
 
     #clears TA. Deleting only fp-relative variables. gp-relative variables stay
-    def clear_ta_before_return(self):
+    def clear_ta_before_end_of_func(self):
         # gp-relative stay
         # fp relative delete
         for i in range(len(self.AddressTable)):
@@ -304,44 +311,61 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 if self.AddressTable[i][1][0] == 'fp':      # pamet je ve staku
                     del self.AddressTable[i]
 
-    #load all parameters into registers/stack exactly before the call
-    def load_parameters_before_call(self):
-        for i in reversed(xrange(len(self.parametrs))):
-            # load one parameter
-            # ('PARAM', type , cislo parametru , variable)
-            param_reg = self.getreg_param(self.parametrs[i][2])     # choose register a0-a3/ stack
-            if self.parametrs[i][1] == 'int':
-                self.change_segment_type_to_text()
-                if param_reg != 'STACK':              # davame parametr do registru a0-a3
-                    self.free_register(param_reg)     # if this register already has a value, then move it to the memory
-                    # put parametr into registr
-                    self.load_variable_to_register_from_address(
-                        self.parametrs[i][3], param_reg)             # nacteme potrebnou promenou do registru
-                    self.use_register(param_reg, self.parametrs[i][3], ForWrite)
-                else:                       # davame parametr do stacku 4+
-                    # todo push parametr into stack
-                    pass
-            if self.parametrs[i][1] == 'char':
-                self.change_segment_type_to_text()
-                if param_reg != 'STACK':              # davame parametr do registru a0-a3
-                    self.free_register(param_reg)     # if this register already has a value, then move it to the memory
-                    # put parametr into registr
-                    self.load_variable_to_register_from_address(
-                        self.parametrs[i][3], param_reg)             # nacteme potrebnou promenou do registru
-                    self.use_register(param_reg, self.parametrs[i][3], ForWrite)
-                else:                       # davame parametr do stacku 4+
-                    # todo push parametr into stack
-                    pass
-            # todo string
-            #if second == 'string':
-            #   self.change_segment_type_to_data()
+    #clears TR. Erase all registers, except holding global
+    def clear_tr_before_end_of_func(self):
+        for i in list_reg:
+            if self.Reg[i] == 'used':
+                variable = self.Reg[i][2]
+                j = self.look_variable_in_addresstable(variable)
+                if j is None:       # assume, that clear_ta_before_end_of_func was called before
+                    self.Reg[i] = 'free', None, False
 
-            # when we finally find the first parameter, we stop
+    #clears TA and TR before end of function
+    def do_clean_before_end_of_func(self):
+        self.clear_ta_before_end_of_func()
+        self.clear_tr_before_end_of_func()
+
+    # get list of the current parameters
+    # it starts from last and end at first
+    def get_curr_param_list(self):
+        curr_param_list = {}
+        for i in reversed(xrange(len(self.parametrs))):
+            curr_param_list[len(curr_param_list)] = self.parametrs[i]
+            # when we finally find the first parameter, we delete it and stop
             if self.parametrs[i][2] == 1:
                 del self.parametrs[i]
                 break
-            # after loading parameters in registers/saving parameters into the stack need to delete it from the set
+                # after loading parameters in registers/saving parameters into the stack need to delete it from the set
             del self.parametrs[i]
+        return curr_param_list
+
+    #load all parameters into registers/stack exactly before the call
+    def load_parameters_before_call(self):
+        curr_param_list = self.get_curr_param_list()    # get list of the current parameters
+        # go through the current list of parameters from first parameter till last parameter
+        for i in reversed(xrange(len(curr_param_list))):
+            # load one parameter
+            # ('PARAM', type , cislo parametru , variable)
+            param_reg = self.getreg_param(curr_param_list[i][2])     # choose register a0-a3/ stack
+            if curr_param_list[i][1] == 'int' or curr_param_list[i][1] == 'char':
+                self.change_segment_type_to_text()
+                if param_reg != 'STACK':              # davame parametr do registru a0-a3
+                    self.free_register(param_reg)     # if this register already has a value, then move it to the memory
+                    # put parametr into registr
+                    self.load_variable_to_register_from_address(
+                        curr_param_list[i][3], param_reg)             # nacteme potrebnou promenou do registru
+                    self.use_register(param_reg, curr_param_list[i][3], ForWrite)
+                else:                       # davame parametr do stacku 4+
+                    r = self.getreg(param_reg[3])
+                    self.save_word_into_stack(r)
+                    # todo string
+                    #if second == 'string':
+                    #   self.change_segment_type_to_data()
+
+    def read_next_arg_stack(self, variable):
+        self.AddressTable[len(self.AddressTable)] = 'memory', (
+            'fp', self.arg_offset), None, variable   # save information in TA about the variable
+        self.arg_offset -= 4
 
     def compile(self, element):
         first, second, third, forth = element
@@ -351,21 +375,12 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         # ('ARG', Type, Number, Variable)
         if first == 'ARG':
             r = self.getreg_param(third)
-            if second == 'int':
+            if second == 'int' or second == 'char':
                 self.change_segment_type_to_text()
                 if r != 'STACK':
                     self.Reg[r] = 'used', forth, False
                 else:
-                    # todo read from stack
-                    pass
-            if second == 'char':
-                self.change_segment_type_to_text()
-                if r != 'STACK':
-                    self.Reg[r] = 'used', forth, False
-                    pass
-                else:
-                    #todo read from stack
-                    pass
+                    self.read_next_arg_stack(forth)
                     # if second == 'string':
                     #    self.change_segment_type_to_data()
                     #    if r != 'STACK':
@@ -381,33 +396,10 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             #save to the memory
             self.synch_variable_value_with_memory(forth)
 
-            #param_reg = self.getreg_param(third)          # vybrat registr a0-a3/stack v zavislosti na cisle parametru
-            #
-            #if second == 'int':
-            #    self.change_segment_type_to_text()
-            #    if param_reg != 'STACK':                # davame parametr do registru a0-a3
-            #        self.free_register(param_reg)       # if this register already has a value, then move it to the memory
-            #        # put parametr into registr
-            #        r = self.getreg(forth, ForRead)     # nacteme potrebnou promenou do registru
-            #        self.gen('move $' + param_reg + ' , $' + r) # posuneme do potrebnho registru
-            #        # todo optimizivat :)
-            #    else:                       # davame parametr do stacku 4+
-            #        # todo push parametr into stack
-            #        pass
-            #    # todo parametrs byte and string
-            #if second == 'byte':
-            #    self.change_segment_type_to_text()
-            #if second == 'string':
-            #   self.change_segment_type_to_data()
-      #      if self.parametr_count == 0:                                # jen zaciname predavat parametry
-                #todo save caller-save registers
-                #$t0-$t9 $a0-$a3 $v0-$v1
-                #modify offset
-     #       self.parametr_count += 1
-
         #('FUNCTION', name , none , none)
         if first == 'FUNCTION':
             self.is_in_func = True
+            self.arg_offset = -4
             self.change_segment_type_to_text()
             self.gen(second + ':')
             self.gen('subu $sp, $sp, 8')  # decrement sp to make space to save ra, fp
@@ -418,15 +410,20 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             #r kolicestvo sochranennych registrov.
             # offset 0 -used, offset 4 used, offset 8 free
             roff = 0
-
             self.foffset = 8 + roff              # sdvig v tekuschem frame.
+
+        # ('ENDFUNC', None , None , None)
+        if first == 'ENDFUNC':
+            self.is_in_func = False
+            self.do_clean_before_end_of_func()
 
         #('DIM', 'typ', 'value', 'jmeno')
         if first == 'DIM':
             if second == 'char':  # todo it is byte! how does it work
                 self.change_segment_type_to_text()
                 r = self.getreg(forth, ForWrite)                    # find register for storing variable
-                self.gen('li $' + r + ', \'' + str(third)+'\'')  # self.gen('addiu $' + r + ',$zero,\'' + str(third) + '\'')        # load value in this register
+                self.gen('li $' + r + ', \'' + str(
+                    third) + '\'')  # self.gen('addiu $' + r + ',$zero,\'' + str(third) + '\'')        # load value in this register
                 if self.is_in_global():     # todo check global
                     self.gen('sw $' + r + ',' + str(self.goffset) + '($gp)')
                     self.AddressTable[len(self.AddressTable)] = 'memory', (
@@ -522,22 +519,19 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 r = self.getreg(second, ForRead)                   # find register for storing variable
                 self.free_register('v0')                           # save variable stored in 'v0'
                 self.gen('move $v0, $' + r)
-            self.clear_tr_before_return()
-            self.clear_ta_before_return()
+            self.synch_tr_before_return()                          # saves globals/strings
             self.gen('move $sp, $fp')       # pop stackframe
             self.gen('lw $ra, -4($fp)')
             self.gen('lw $fp, 0($fp)')
             self.gen('jr $ra')
-            self.is_in_func = False
 
         #('TEMP', type, value, tempname)
         if first == 'TEMP':
             if second == 'char':  # todo it is byte! how does it work
                 self.change_segment_type_to_text()
                 r = self.getreg(forth, ForWrite)                    # find register for storing variable
-                if third == '\\n':
-                    third = '\x0a'
-                self.gen('li $' + r + ', \'' + str(third)+'\'')        # load value in this register
+                self.gen('li $' + r + ', ' + str(third))        # load value in this register
+                # self.gen('li $' + r + ', \'' + str(third) + '\'')        # load value in this register
                 #if self.is_global():    #todo is global???
                 #    self.gen('sw $' + r + ',' + str(self.goffset) + '($gp)')
                 #    self.AddressTable[len(self.AddressTable)] = 'memory', (
@@ -575,17 +569,27 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
         #(CALL, name, type , result)
         if first == 'CALL':
-#            self.parametr_count = 0     # po volani funkce zaciname szitat parametry zase od zacatku
-            #todo jestli nado clear
-            self.ClearRegistersBeforeJump() # todo ??? delete
-            self.load_parameters_before_call()
-            self.gen('jal ' + second)
-            if forth is not None:
-                r1 = self.getreg(forth, ForWrite)
-                self.gen('move $' + r1 + ',$v0')
-                self.use_register(r1, forth, ForWrite)
+            if second in vestavene_funkce:
+                self.do_vestavena_funkce(element)
+            else:
+                #todo jestli nado clear
+                self.ClearRegistersBeforeJump() # todo ??? delete
+                self.load_parameters_before_call()
+                self.gen('jal ' + second)
+                if forth is not None:
+                    # todo int char string
+                    r1 = self.getreg(forth, ForWrite)
+                    self.gen('move $' + r1 + ',$v0')
+                    self.use_register(r1, forth, ForWrite)
 
-    #Save content of registers. Synchs the content of registers with variables in memory
+    def do_vestavena_funkce(self, element):
+        first, second, third, forth = element
+        if second == 'print':
+            curr_param_list = self.get_curr_param_list()
+            for i in reversed(xrange(len(curr_param_list))):
+                pass
+                
+    # Save content of registers. Synchs the content of registers with variables in memory
     def ClearRegistersBeforeJump(self):
         if debug:
             self.gen('start synchronize registers with memory')
@@ -602,33 +606,3 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         f = open('myfile.asm', 'w')
         f.write(self.program) # python will convert \n to os.linesep
         f.close() # you can omit in most cases as the destructor will call if
-
-
-        #my_tuple = ('FUNCTION', 'main', 3, 6)
-        #my_tuple1 = ('DIM', 'char', 'znak', 'o')
-        #my_tuple2 = ('DIM', 'string', 'retezec', "kk")
-        #my_tuple3 = ('DIM', 'int', 3,'a')
-        #my_tuple4 = ('DIM', 'int', 5,'b')
-        #my_tuple5 = ('DIM', 'int', 0,'c')
-        #my_tuple6 = ('+', 'a', 'b', 'c')
-        #my_tuple7 = ('-', 'a', 'c', 'b')
-        #cg = CodeGenerator()
-        #cg.compile(my_tuple4)
-        #cg.compile(my_tuple)
-        ##cg.compile(my_tuple1)
-        ##cg.compile(my_tuple2)
-        #cg.compile(my_tuple3)
-        ##cg.compile(my_tuple4)
-        #cg.compile(my_tuple5)
-        ##print cg.program
-        ##print cg.Reg
-        ##print cg.AddressTable
-        #cg.free_register('t0')
-        #cg.compile(my_tuple6)
-        #print cg.program
-        #print cg.Reg
-        #print cg.AddressTable
-        #cg.compile(my_tuple7)
-        #print cg.program
-        #print cg.Reg
-        #print cg.AddressTable
