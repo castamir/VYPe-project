@@ -48,11 +48,6 @@ class VYPeProject:
     @staticmethod
     def parse(data):
         tac = parse(data)
-        #debug prints
-        #if tac is not None:
-        #    for line in tac:
-        #        pass
-        #        print line
         return tac
 
     def generate_target_program(self, tac):
@@ -60,18 +55,8 @@ class VYPeProject:
         for line in tac:
             print line
             cg.compile(line)
-        #print cg.program
-#<<<<<<< HEAD
-#
-#        cg1 = CodeGenerator()
-#        cg1.GenerateProgram(tac)
-#        print '\n'
-#        print cg1.program
-#        pass
-#=======
-        with open(self.input_file + ".asm", "w") as my_file:
+        with open(self.input_file[:-4] + ".asm", "w") as my_file:
             my_file.write(cg.program)
-#>>>>>>> 9757f9ebba8c75601d5736ae45bb15e27e63361d
 
 
 if __name__ == "__main__":
