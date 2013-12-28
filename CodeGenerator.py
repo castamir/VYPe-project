@@ -144,6 +144,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             if treg is not None:
                 if reason == ForRead:  # load current value, Modify TR, TA
                     self.load_variable_to_register_from_address(varname, treg)
+                    #todo strings
             else:
                 print 'AllRegisters are used'
                 # todo vybrat iz zanatych kakojto treg
@@ -216,6 +217,18 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         self.Reg['22'] = 'free', None, False
         self.Reg['23'] = 'free', None, False
         self.pc = 0
+        self.change_segment_type_to_data()
+        self.gen('tm_empty_string' + ':')
+        self.gen('.asciz ""')  # store an empty string in a memory
+        self.gen('.text')
+        self.gen('.org 0')
+        self.gen('nop')
+        self.gen('nop')
+        self.gen('addiu $sp, $0, 0x4000')
+        self.gen('jal main')
+        self.gen('nop')
+        self.gen('break')
+
         # self.gen('.text')
         # self.gen('main:')
         # self.gen('.align 2')    # todo ??
@@ -267,11 +280,14 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     def compile_un_op(self, element):
         first, second, third, forth = element
-        r = self.getreg(second, ForRead)
-        t = self.getreg(forth, ForWrite)
-        self.gen(self.getunop(first) + ' $' + t + ',$' + r)
-        self.use_register(t, forth, ForWrite)
-        self.check_temp_var(element)                    # free used temp variables
+        if not self.is_string_variable(forth):
+            r = self.getreg(second, ForRead)
+            t = self.getreg(forth, ForWrite)
+            self.gen(self.getunop(first) + ' $' + t + ',$' + r)
+            self.use_register(t, forth, ForWrite)
+            self.check_temp_var(element)                    # free used temp variables
+        else:
+            pass
         # todo STRINGS =
 
     def is_temp_variable(self, variable):
@@ -456,10 +472,14 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                     self.foffset = self.foffset + 4           # calclate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth, False
             if second == 'string': #todo check to work
-                self.change_segment_type_to_data()
-                self.gen(forth + ':')
-                self.gen('.asciz "' + third + '"')  # store a string in a memory
-                self.AddressTable[len(self.AddressTable)] = 'memory', ('28', None), None, forth # todo add to TA
+                r = self.getreg(forth, ForWrite)
+                self.gen('la $'+r+', tm_empty_string')
+                self.gen('subu $29, $29, 4')                        # decrement sp to make space for local variable
+                self.gen('sw $' + r + ',4($29)')                    # save address of the string_variable in stack
+                self.AddressTable[len(self.AddressTable)] = 'string', (
+                        '30', self.foffset), r, forth               # save information in TA about variable
+                self.foffset += 4                   # calculate offset of the next local variable in this segment
+                self.Reg[r] = 'used', forth, False
 
         # (BINOPERATION, 'argument1', 'argument2', 'vysledek')
         if self.getbinop(first) is not None:
