@@ -356,7 +356,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                         curr_param_list[i][3], param_reg)             # nacteme potrebnou promenou do registru
                     self.use_register(param_reg, curr_param_list[i][3], ForWrite)
                 else:                       # davame parametr do stacku 4+
-                    r = self.getreg(param_reg[3])
+                    r = self.getreg(curr_param_list[i][3], ForRead)
                     self.save_word_into_stack(r)
                     # todo string
                     #if second == 'string':
@@ -422,8 +422,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             if second == 'char':  # todo it is byte! how does it work
                 self.change_segment_type_to_text()
                 r = self.getreg(forth, ForWrite)                    # find register for storing variable
-                self.gen('li $' + r + ', \'' + str(
-                    third) + '\'')  # self.gen('addiu $' + r + ',$zero,\'' + str(third) + '\'')        # load value in this register
+                self.gen('li $' + r + ', ' + str(
+                    third))  # self.gen('addiu $' + r + ',$zero,\'' + str(third) + '\'')        # load value in this register
                 if self.is_in_global():     # todo check global
                     self.gen('sw $' + r + ',' + str(self.goffset) + '($gp)')
                     self.AddressTable[len(self.AddressTable)] = 'memory', (
@@ -587,8 +587,9 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         if second == 'print':
             curr_param_list = self.get_curr_param_list()
             for i in reversed(xrange(len(curr_param_list))):
-                pass
-                
+                if third == 'int':
+                    pass
+
     # Save content of registers. Synchs the content of registers with variables in memory
     def ClearRegistersBeforeJump(self):
         if debug:
