@@ -610,8 +610,41 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             curr_param_list = self.get_curr_param_list()
             for i in reversed(xrange(len(curr_param_list))):
                 if curr_param_list[i][1] == 'int':
-                    pass
-
+                    r = self.getreg(curr_param_list[i][3], ForRead)
+                    self.gen('PRINT_INT $' + r)
+                if curr_param_list[i][1] == 'char':
+                    r = self.getreg(curr_param_list[i][3], ForRead)
+                    self.gen('PRINT_CHAR $' + r)
+                if curr_param_list[i][1] == 'string':  #todo strings
+                    r = self.getreg(curr_param_list[i][3], ForRead)
+                    self.gen('PRINT_STRING $' + r)
+        if second == 'read_int':
+            r = self.getreg(forth, ForWrite)
+            self.gen('READ_INT $'+r)
+            self.use_register(r, forth, ForWrite)
+        if second == 'read_char':
+            r = self.getreg(forth, ForWrite)
+            self.gen('READ_CHAR $'+r)
+            self.use_register(r, forth, ForWrite)
+        if second == 'read_string':
+            r = self.getreg(forth, ForWrite)
+            #todo strings
+            self.gen('READ_string $'+r)
+            self.use_register(r, forth, ForWrite)
+        if second == 'get_at':  #todo getat
+            #r = self.getreg(forth, ForWrite)
+            #self.gen('READ_CHAR $'+r)
+            #self.use_register(r, forth, ForWrite)
+            pass
+        if second == 'set_at':  #todo setat
+            #r = self.getreg(forth, ForWrite)
+            #self.gen('READ_CHAR $'+r)
+            #self.use_register(r, forth, ForWrite)
+            pass
+        if second == 'strcat':
+            pass
+            #todo strcat
+    
     # Save content of registers. Synchs the content of registers with variables in memory
     def ClearRegistersBeforeJump(self):
         if debug:
