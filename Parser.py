@@ -72,7 +72,7 @@ def p_variable_declaration(p):
     if type == "string":
         init_value = ""
     elif type == "char":
-        init_value = '\0'
+        init_value = hex(ord('\0'))
     else:
         init_value = 0
     for name in p[2]:
@@ -187,11 +187,13 @@ def p_function_header(p):
     p[0] = []
     p[0].append(('FUNCTION', name, None, None))
     args_counter = 0
+    args_instr = []
     if args is not None:
         for arg in args:
             args_counter += 1
             type, name = arg
-            p[0].append(('ARG', type, args_counter, "x%s" % name))
+            args_instr.append(('ARG', type, args_counter, "x%s" % name))
+    p[0] += reversed(args_instr)  # for code-generator purpose
     return p
 
 
