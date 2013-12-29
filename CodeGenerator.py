@@ -113,8 +113,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.save_new_variable_into_stack(preg)
             else:                                           # Global variables MUST have already allocated space
        #         if not self.is_string_variable(self.Reg[preg][1]):
-                    self.gen('sw $' + preg + ',' + address)             # move to memory SW for all variables in STACK
-                # todo check
+                self.gen('sw $' + preg + ',' + address)             # move to memory SW for all variables in STACK
             p1, p2, p3 = self.Reg[preg]
             self.Reg[preg] = p1, p2, False
 
@@ -128,11 +127,14 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         for i in list_reg:
             if self.Reg[i][0] == 'free' and (i not in regs_except):
                 return i
-        print 'AllRegisters are used'
-        # todo vybrat iz zanatych kakojto treg
-        # uloz obsah R do pameti a modifikuj TR & TA
-        # rapisat v treg todo
-        #            self.use_register(t, forth)
+        if debug:
+            print 'AllRegisters are used'
+        for i in list_reg:
+            if self.Reg[i][0] == 'used' and (i not in regs_except):
+                # suitable register was chosen
+                self.free_register(i)
+                return i
+        #teoreticky vubec nikdy nenastane
         return None
 
     def look_variable_in_register(self, varname):
@@ -278,8 +280,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
     def compile_bin_operation(self, element):
         first, second, third, forth = element
         r = self.getreg(second, ForRead)
-        s = self.getreg(third, ForRead)
-        t = self.getreg(forth, ForWrite)
+        s = self.getreg(third, ForRead, [r])
+        t = self.getreg(forth, ForWrite, [r, s])
         binop = self.getbinop(first)
         pc_temp = self.pc
         if binop == 'seq':
@@ -346,8 +348,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                                         if debug:
                                             self.gen(";do &&   /   ||")
                                         r = self.getreg(temp_var1, ForRead)
-                                        s = self.getreg(temp_var3, ForRead)
-                                        t = self.getreg(forth, ForWrite)
+                                        s = self.getreg(temp_var3, ForRead, [r])
+                                        t = self.getreg(forth, ForWrite, [r, s])
                                         self.gen(binop + ' $' + t + ',$' + r + ', $' + s)
                                         self.check_temp_var(temp_var1)
                                         self.check_temp_var(temp_var3)
@@ -362,7 +364,6 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         # pravdivosti relace, jinak 0
 
     def compile_un_op(self, element):
-        # todo check
         first, second, third, forth = element
         if not self.is_string_variable(forth):
             self.change_segment_type_to_text()
@@ -376,12 +377,12 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             else:
                 if unop == 'neg':
                     r = self.getreg(second, ForRead)
-                    t = self.getreg(forth, ForWrite)
+                    t = self.getreg(forth, ForWrite, [r])
                     self.gen('sub $' + t + ', $0, $' + r)
 
                 else:
                     r = self.getreg(second, ForRead)
-                    t = self.getreg(forth, ForWrite)
+                    t = self.getreg(forth, ForWrite, [r])
                     self.gen(unop + ' $' + t + ',$' + r)
                 self.use_register(t, forth, ForWrite)
             self.check_temp_var(second)                    # free used temp variabless
@@ -431,12 +432,19 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         self.gen('j ' + label_name)
         self.gen(label_name + '_end:')
         self.gen('sb $' + t + ', ($' + r + ') ')
+        temp_var = 'tm_'+finalstr+str(self.pc)
+        self.compile(('TEMP', 'int', '0', temp_var))
+        f = self.getreg(temp_var, ForWrite, [r, s, t])
+        self.gen('move $' + f + ', $'+r)
+        self.use_register(f, temp_var, ForWrite)
         self.Reg[self.look_variable_in_register(finalstr)] = 'free', None, None
-        a, b, c, d = self.AddressTable[self.look_variable_in_addresstable(finalstr)]
-        self.AddressTable[self.look_variable_in_addresstable(finalstr)] = a, b, None, d
-        self.Reg[self.look_variable_in_register(sourcestr)] = 'free', None, None
+        if self.look_variable_in_addresstable(finalstr) is not None:
+            a, b, c, d = self.AddressTable[self.look_variable_in_addresstable(finalstr)]
+            self.AddressTable[self.look_variable_in_addresstable(finalstr)] = a, b, None, d
+            self.Reg[self.look_variable_in_register(sourcestr)] = 'free', None, None
         a, b, c, d = self.AddressTable[self.look_variable_in_addresstable(sourcestr)]
         self.AddressTable[self.look_variable_in_addresstable(sourcestr)] = a, b, None, d
+        return temp_var
 
     def is_temp_variable(self, variable):
         if string.find(variable, 'tm_') == 0:
@@ -584,11 +592,11 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             self.gen('sw $30, 8($29)')    # save fp offset =0
             self.gen('sw $31, 4($29)')    # save ra offset =4
             self.gen('addiu $30, $29, 8') # set up new fp
-            #todo save $s0-$s7
+            #save $s0-$s7
             #r kolicestvo sochranennych registrov.
             # offset 0 -used, offset 4 used, offset 8 free
-            roff = 0
-            self.foffset = 8 + roff              # sdvig v tekuschem frame.
+            #roff = 0
+            self.foffset = 8 #+ roff              # sdvig v tekuschem frame.
 
         # ('ENDFUNC', None , None , None)
         if first == 'ENDFUNC':
@@ -731,9 +739,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             if second in vestavene_funkce:
                 self.do_vestavena_funkce(element)
             else:
-                #todo jestli nado clear
                 self.change_segment_type_to_text()
-                self.ClearRegistersBeforeJump() # todo ??? delete
+                self.ClearRegistersBeforeJump()
                 self.load_parameters_before_call()
                 self.gen('jal ' + second)
                 if forth is not None:
@@ -855,7 +862,27 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 pass
         if second == 'strcat':
             pass
-            #todo strcat
+            #    t0 = a0 +a1
+            #    a0  pointer to first string
+            #    a1  pointer to second string
+            #    t0  pointer to result
+            # strcpy (result, a0)
+            # strcpy (result +len,a1)
+            label_name = second + str(self.pc)
+            self.change_segment_type_to_data()
+            self.gen(label_name + ':')
+            self.gen('.space '+str(self.buffer_size*2))  # allocate buffer
+            self.AddressTable.append((self.buffer_size*2, ('28', None), None, label_name))
+            self.change_segment_type_to_text()
+            curr_param_list = self.get_curr_param_list()
+         #   r = self.getreg(curr_param_list[1][3], ForRead)         # pointer to first string
+         #   s = self.getreg(curr_param_list[0][3], ForRead, [r])    # pointer to second string
+            d = self.strcpy(label_name, curr_param_list[1][3])       # curr_param_list[1][3] is a pointer to string
+            r = self.getreg(forth, ForWrite)                         # pointer to a copy of string
+            self.gen('la $' + r + ',' + label_name)
+            self.use_register(r, forth, ForWrite)
+            self.synch_reg_with_memory(r)
+            self.strcpy(d, curr_param_list[0][3])
 
     # Save content of registers. Synchs the content of registers with variables in memory
     def ClearRegistersBeforeJump(self):
