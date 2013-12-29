@@ -153,8 +153,6 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         treg = self.look_variable_in_register(varname)
         if treg is None:
             treg = self.find_free_register(regs_except)
-            if regs_except is not None:
-                pass
             if reason == ForRead:  # load current value, Modify TR, TA
                 self.load_variable_to_register_from_address(varname, treg)
         return treg
@@ -279,11 +277,36 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
     def compile_bin_operation(self, element):
         first, second, third, forth = element
-        r = self.getreg(second, ForRead)
-        s = self.getreg(third, ForRead, [r])
-        t = self.getreg(forth, ForWrite, [r, s])
+        r = self.getreg(second, ForRead)             # r first param
+        s = self.getreg(third, ForRead, [r])         # s second param
+        t = self.getreg(forth, ForWrite, [r, s])     # t result
         binop = self.getbinop(first)
         pc_temp = self.pc
+    #    if self.is_string_variable(forth):
+            #if binop == 'slt':
+            #    label_name_start = 'tm_' + forth + str(pc_temp) + '_s'
+            #    label_name_end = 'tm_' + forth + str(pc_temp) + '_e'
+            #    label_name_if = 'tm_' + forth + str(pc_temp) + 'if_true'
+            #    label_name_if_end = 'tm_' + forth + str(pc_temp) + 'if_end'
+            #    t1 = self.find_free_register([r, s, t])
+            #    t2 = self.find_free_register([r, s, t, t1])
+            #    self.gen(label_name_start + ':')
+            #    self.gen('lb $' + t1 + ', ($'+r+')')
+            #    self.gen('lb $' + t2 + ', ($'+s+')')
+            #    self.gen('beq $' + t1 + ',$' + t2 + ',' + label_name_if)
+            #
+            #         self.gen('beq $' + t1 + ',$0,' + label_name_if1)
+            #
+            #    self.gen('ori $' + t + ',$0, 0')
+            #    self.gen('beq $0 ,$0,' + label_name_if_end)
+            #    self.gen(label_name_if + ':')
+            #
+            #    self.gen('ori $' + t + ',$0, 1')
+            #    self.gen(label_name_if_end + ':')
+            #    #
+            #    #
+     #       pass
+     #   else:
         if binop == 'seq':
             self.gen('beq $' + s + ',$' + r + ',' + forth + '_' + str(pc_temp))
             self.gen('ori $' + t + ',$0, 0')
@@ -329,10 +352,10 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                                 else:
                                     if binop == 'and' or binop == 'or':
                                         #  A && B na (A!=0) && (B!=0)
-                                        temp_var = 'tm_'+forth + str(self.pc)
-                                        temp_var1 = 'tm_1'+forth + str(self.pc)
-                                        temp_var2 = 'tm_2'+forth + str(self.pc)
-                                        temp_var3 = 'tm_3'+forth + str(self.pc)
+                                        temp_var = 'tm_0_'+forth + str(self.pc)
+                                        temp_var1 = 'tm_1_'+forth + str(self.pc)
+                                        temp_var2 = 'tm_2_'+forth + str(self.pc)
+                                        temp_var3 = 'tm_3_'+forth + str(self.pc)
                                         if debug:
                                             self.gen(";start A!=0")
                                         self.compile(('TEMP', 'int', '0', temp_var))
@@ -369,7 +392,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             self.change_segment_type_to_text()
             unop = self.getunop(first)
             if unop == 'not':
-                temp_var = forth + str(self.pc)
+                temp_var = 'tm_'+ forth + '_'+str(self.pc)
                 self.compile(('TEMP', 'int', '0', temp_var))
                 temp_element = ('==', temp_var, second, forth)
                 self.compile_bin_operation(temp_element)
@@ -388,7 +411,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             self.check_temp_var(second)                    # free used temp variabless
         else:
             self.change_segment_type_to_data()
-            label_name = forth + str(self.pc)
+            label_name = 'tm_'+forth + str(self.pc)
             new_len = self.AddressTable[self.look_variable_in_addresstable(second)][0]  # every string is in TA
             self.gen(label_name + ':')
             self.gen('.space '+str(self.buffer_size))  # allocate buffer
@@ -524,7 +547,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                     self.save_word_into_stack(r)
             if curr_param_list[i][1] == 'string':
                 self.change_segment_type_to_data()
-                label_name = curr_param_list[i][3] + str(self.pc)
+                label_name = curr_param_list[i][3] +'_'+ str(self.pc)
                 self.gen(label_name + ':')
                 self.gen('.space '+str(self.buffer_size))  # allocate buffer
                 self.AddressTable.append((self.buffer_size, ('28', None), None, label_name))
@@ -765,7 +788,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
 
         if first == 'CHAR_TO_STRING':
             self.change_segment_type_to_data()
-            label_name = forth + str(self.pc)
+            label_name = forth + '_'+str(self.pc)
             self.gen(label_name + ':')
             self.gen('.space '+str(2))  # allocate buffer has only one symbol + null_term
             self.AddressTable.append(( 1, ('28', None), None, label_name))
@@ -809,7 +832,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             self.use_register(r, forth, ForWrite)
         if second == 'read_string':
             self.change_segment_type_to_data()
-            label_name = forth + str(self.pc)
+            label_name = forth + '_' + str(self.pc)
             self.gen(label_name + ':')
             self.gen('.space '+str(self.buffer_size))  # allocate buffer
             self.AddressTable.append((self.buffer_size, ('28', None), None, label_name))
@@ -841,7 +864,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.gen('lb $'+t+',($'+q+')')
         if second == 'set_at':
             curr_param_list = self.get_curr_param_list()
-            label_name = second + str(self.pc)
+            label_name = second + '_' + str(self.pc)
             if forth is not None:
                 self.change_segment_type_to_data()
                 self.gen(label_name + ':')
@@ -868,7 +891,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             #    t0  pointer to result
             # strcpy (result, a0)
             # strcpy (result +len,a1)
-            label_name = second + str(self.pc)
+            label_name = second + '_' + str(self.pc)
             self.change_segment_type_to_data()
             self.gen(label_name + ':')
             self.gen('.space '+str(self.buffer_size*2))  # allocate buffer
