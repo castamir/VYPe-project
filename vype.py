@@ -48,6 +48,8 @@ class VYPeProject:
     @staticmethod
     def parse(data):
         tac = parse(data)
+        for line in tac:
+            print line
         return tac
 
     def generate_target_program(self, tac):
