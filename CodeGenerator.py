@@ -325,7 +325,34 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                                     self.gen('div $' + r + ',$' + s)
                                     self.gen('mflo $' + t)
                                 else:
-                                    self.gen(binop + ' $' + t + ',$' + r + ', $' + s)
+                                    if binop == 'and' or binop == 'or':
+                                        #  A && B na (A!=0) && (B!=0)
+                                        temp_var = 'tm_'+forth + str(self.pc)
+                                        temp_var1 = 'tm_1'+forth + str(self.pc)
+                                        temp_var2 = 'tm_2'+forth + str(self.pc)
+                                        temp_var3 = 'tm_3'+forth + str(self.pc)
+                                        if debug:
+                                            self.gen(";start A!=0")
+                                        self.compile(('TEMP', 'int', '0', temp_var))
+                                        self.compile(('TEMP', 'int', '0', temp_var1))
+                                        temp_element1 = ('!=', temp_var, second, temp_var1)
+                                        self.compile_bin_operation(temp_element1)
+                                        if debug:
+                                            self.gen(";start B!=0")
+                                        self.compile(('TEMP', 'int', '0', temp_var2))
+                                        self.compile(('TEMP', 'int', '0', temp_var3))
+                                        temp_element2 = ('!=', temp_var2, third, temp_var3)
+                                        self.compile_bin_operation(temp_element2)
+                                        if debug:
+                                            self.gen(";do &&   /   ||")
+                                        r = self.getreg(temp_var1, ForRead)
+                                        s = self.getreg(temp_var3, ForRead)
+                                        t = self.getreg(forth, ForWrite)
+                                        self.gen(binop + ' $' + t + ',$' + r + ', $' + s)
+                                        self.check_temp_var(temp_var1)
+                                        self.check_temp_var(temp_var3)
+                                    else:
+                                        self.gen(binop + ' $' + t + ',$' + r + ', $' + s)
         self.use_register(t, forth, ForWrite)
         self.check_temp_var(second)                    # free used temp variables
         self.check_temp_var(third)                    # free used temp variables
@@ -339,17 +366,24 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
         first, second, third, forth = element
         if not self.is_string_variable(forth):
             self.change_segment_type_to_text()
-            r = self.getreg(second, ForRead)
-            t = self.getreg(forth, ForWrite)
             unop = self.getunop(first)
-            if unop == 'neg':
-                self.gen('sub $' + t + ', $0, $' + r)
+            if unop == 'not':
+                temp_var = forth + str(self.pc)
+                self.compile(('TEMP', 'int', '0', temp_var))
+                temp_element = ('==', temp_var, second, forth)
+                self.compile_bin_operation(temp_element)
+                #self.gen('nor $' + t + ', $' + r + ', $0')
             else:
-                if unop == 'not':
-                    self.gen('nor $' + t + ', $' + r + ', $0')
+                if unop == 'neg':
+                    r = self.getreg(second, ForRead)
+                    t = self.getreg(forth, ForWrite)
+                    self.gen('sub $' + t + ', $0, $' + r)
+
                 else:
+                    r = self.getreg(second, ForRead)
+                    t = self.getreg(forth, ForWrite)
                     self.gen(unop + ' $' + t + ',$' + r)
-            self.use_register(t, forth, ForWrite)
+                self.use_register(t, forth, ForWrite)
             self.check_temp_var(second)                    # free used temp variabless
         else:
             self.change_segment_type_to_data()
