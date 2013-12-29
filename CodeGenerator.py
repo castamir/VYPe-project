@@ -14,14 +14,14 @@ list_reg_param = ['a0', 'a1', 'a2', 'a3']
 ForRead = 'read'
 ForWrite = 'write'
 debug = False
-NotString = 0;
-IsString = 1;
+NotString = 0
+IsString = 1
 
 vestavene_funkce = ['print', 'read_char', 'read_string', 'read_int', 'get_at', 'set_at', 'strcat']
 
 class CodeGenerator:                        # type , Varname , isDifferentFromMemory
     Reg = {}                                # reserved , None  / free, None  /  used , name_of_variable
-    AddressTable = {}                       # ( None/Length of string, (segment,offset), registername, namevariable)
+    AddressTable = []                      # ( None/Length of string, (segment,offset), registername, namevariable)
     goffset = 0                             # indicates an offset in global segment. Always of the first free row
     foffset = 0                             # indicates offsets in segments. Always  of the first free row
     is_data_segment = None                  # None - no segment started, true - data segment started, False -text segment
@@ -87,8 +87,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
     #save a new variable stored in the register PREG into the stack
     def save_new_variable_into_stack(self, preg):
         self.save_word_into_stack(preg)                 # fp 30
-        self.AddressTable[len(self.AddressTable)] = None, (
-            '30', self.foffset - 4), None, self.Reg[preg][1]    # save information in TA about variable
+        self.AddressTable.append((None, (
+            '30', self.foffset - 4), None, self.Reg[preg][1]))    # save information in TA about variable
 
     #save word into stack                               #sp 29
     def save_word_into_stack(self, preg):
@@ -357,7 +357,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             new_len = self.AddressTable[self.look_variable_in_addresstable(second)][0]  # every string is in TA
             self.gen(label_name + ':')
             self.gen('.space '+str(self.buffer_size))  # allocate buffer
-            self.AddressTable[len(self.AddressTable)] = new_len, ('28', None), None, label_name
+            self.AddressTable.append((self.buffer_size, ('28', None), None, label_name))
             self.change_segment_type_to_text()
             self.strcpy(label_name, second)
             r = self.getreg(forth, ForWrite)
@@ -378,8 +378,14 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
     #copy_end:
     #finalstr ,  sourcestr  must be null terminated
     def strcpy(self, finalstr, sourcestr):
+        if debug:
+            self.gen('r')
         r = self.getreg(finalstr, ForRead)
+        if debug:
+            self.gen('s')
         s = self.getreg(sourcestr, ForRead, [r])
+        if debug:
+            self.gen('t')
         t = self.find_free_register([r, s])
         label_name = sourcestr + '_copy_' + str(self.pc)
         self.gen(label_name + ':')
@@ -422,7 +428,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
     def clear_ta_before_end_of_func(self):
         # gp-relative stay
         # fp relative delete
-        for i in range(len(self.AddressTable)):
+        for i in reversed(xrange(len(self.AddressTable))):
             if self.AddressTable[i][1] is not None:         # ma pamet
                 if self.AddressTable[i][1][0] == '30':      # pamet je ve staku
                     del self.AddressTable[i]
@@ -430,8 +436,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
     #clears TR. Erase all registers, except holding global
     def clear_tr_before_end_of_func(self):
         for i in list_reg:
-            if self.Reg[i] == 'used':
-                variable = self.Reg[i][2]
+            if self.Reg[i][0] == 'used':
+                variable = self.Reg[i][1]
                 j = self.look_variable_in_addresstable(variable)
                 if j is None:       # assume, that clear_ta_before_end_of_func was called before
                     self.Reg[i] = 'free', None, False
@@ -474,17 +480,33 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 else:                       # davame parametr do stacku 4+
                     r = self.getreg(curr_param_list[i][3], ForRead)
                     self.save_word_into_stack(r)
-                    # todo string
-                    #if second == 'string':
-                    #   self.change_segment_type_to_data()
+            if curr_param_list[i][1] == 'string':
+                self.change_segment_type_to_data()
+                label_name = curr_param_list[i][3] + str(self.pc)
+                self.gen(label_name + ':')
+                self.gen('.space '+str(self.buffer_size))  # allocate buffer
+                self.AddressTable.append((self.buffer_size, ('28', None), None, label_name))
+                self.change_segment_type_to_text()
+                self.strcpy(label_name, curr_param_list[i][3])          # curr_param_list[i][3] is a pointer to string
+                #r = self.getreg(label_name, ForWrite)                        # pointer to a copy of string
+                #self.gen('la $' + r + ',' + label_name)
+                #self.use_register(r, label_name, ForWrite)
+                #self.synch_reg_with_memory(r)
+                if param_reg != 'STACK':              # davame parametr do registru a0-a3
+                    self.free_register(param_reg)     # if this register already has a value, then move it to the memory
+                    # put parametr into registr
+                    self.load_variable_to_register_from_address(
+                        label_name, param_reg)             # nacteme potrebnou promenou do registru
+                    self.use_register(param_reg, label_name, ForWrite)
+                else:                       # davame parametr do stacku 4+
+                    r = self.getreg(label_name, ForRead)
+                    self.save_word_into_stack(r)
 
     def read_next_arg_stack(self, variable, type):
         if type == NotString:
-            self.AddressTable[len(self.AddressTable)] = None, (
-            '30', self.arg_offset), None, variable   # save information in TA about the variable
+            self.AddressTable.append((None, ('30', self.arg_offset), None, variable ) ) # save information in TA about the variable
         else:
-            self.AddressTable[len(self.AddressTable)] = self.buffer_size, (
-            '30', self.arg_offset), None, variable   # save information in TA about the variable
+            self.AddressTable.append((self.buffer_size, ('30', self.arg_offset), None, variable))   # save information in TA about the variable
         self.arg_offset -= 4
 
     def compile(self, element):
@@ -505,8 +527,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 if r != 'STACK':
                     self.gen('subu $29, $29, 4')                        # decrement sp to make space for local variable
                     self.gen('sw $' + r + ',4($29)')                    # save address of the string_variable in stack
-                    self.AddressTable[len(self.AddressTable)] = self.buffer_size, (
-                        '30', self.foffset), r, forth               # save information in TA about variable
+                    self.AddressTable.append((self.buffer_size, (
+                        '30', self.foffset), r, forth))               # save information in TA about variable
                     self.foffset += 4                   # calculate offset of the next local variable in this segment
                     self.Reg[r] = 'used', forth, False
                 else:
@@ -547,14 +569,14 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.gen('li $' + r + ', ' + str(third))            # load value in this register
                 if self.is_in_global():
                     self.gen('sw $' + r + ',' + str(self.goffset) + '($28)')
-                    self.AddressTable[len(self.AddressTable)] = None, (
-                        '28', self.goffset), r, forth   # save information in TA about the variable
+                    self.AddressTable.append((None, (
+                        '28', self.goffset), r, forth))   # save information in TA about the variable
                     self.goffset += 4                  # calculate an offset of the next global variable in this segment
                 else:
                     self.gen('subu $29, $29, 4')                        # decrement sp to make space for local variable
                     self.gen('sw $' + r + ',4($29)')                    # save variable in stack
-                    self.AddressTable[len(self.AddressTable)] = None, (
-                        '30', self.foffset), r, forth   # save information in TA about variable
+                    self.AddressTable.append((None, (
+                        '30', self.foffset), r, forth))   # save information in TA about variable
                     self.foffset += 4                   # calculate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth, False      # use register
             if second == 'int':
@@ -563,15 +585,15 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.gen('li $' + r + ', ' + str(third))            # load value in this register
                 if self.is_in_global():
                     self.gen('sw $' + r + ',' + str(self.goffset) + '($28)')
-                    self.AddressTable[len(self.AddressTable)] = None, (
-                        '28', self.goffset), r, forth   # save information in TA about variable
+                    self.AddressTable.append((None, (
+                        '28', self.goffset), r, forth))   # save information in TA about variable
                     self.goffset += 4                   # calclate an offset of the next global variable in this segment
                 else:
                     self.gen(
                         'subu $29, $29, 4')                        # decrement sp to make space for local variable
                     self.gen('sw $' + r + ',4($29)')                    # save variable in stack
-                    self.AddressTable[len(self.AddressTable)] = None, (
-                        '30', self.foffset), r, forth           # save information in TA about variable
+                    self.AddressTable.append((None, (
+                        '30', self.foffset), r, forth))           # save information in TA about variable
                     self.foffset += 4                   # calculate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth, False
             if second == 'string':                          # value is in data segment, address is in register/stack
@@ -579,8 +601,8 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.gen('la $' + r + ', tm_empty_string')
                 self.gen('subu $29, $29, 4')                        # decrement sp to make space for local variable
                 self.gen('sw $' + r + ',4($29)')                    # save address of the string_variable in stack
-                self.AddressTable[len(self.AddressTable)] = 0, (
-                    '30', self.foffset), r, forth               # save information in TA about variable
+                self.AddressTable.append((0, (
+                    '30', self.foffset), r, forth))              # save information in TA about variable
                 self.foffset += 4                   # calculate offset of the next local variable in this segment
                 self.Reg[r] = 'used', forth, False
 
@@ -668,7 +690,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.change_segment_type_to_data()
                 self.gen(forth + ':')
                 self.gen('.asciz "' + third + '"')  # store a string in a memory
-                self.AddressTable[len(self.AddressTable)] = len(third), ('28', None), None, forth
+                self.AddressTable.append((len(third), ('28', None), None, forth))
 
         #(CALL, name, type , result)
         if first == 'CALL':
@@ -681,10 +703,17 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.load_parameters_before_call()
                 self.gen('jal ' + second)
                 if forth is not None:
-                    # todo int char string
                     r1 = self.getreg(forth, ForWrite)
                     self.gen('move $' + r1 + ',$2')
-                    self.use_register(r1, forth, ForWrite)
+                    if third == 'string':
+                        self.gen('subu $29, $29, 4')                     # decrement sp to make space for local variable
+                        self.gen('sw $' + r1 + ',4($29)')                 # save address of the string_variable in stack
+                        self.AddressTable.append((self.buffer_size, (
+                            '30', self.foffset), r1, forth))               # save information in TA about variable
+                        self.foffset += 4                   # calculate offset of the next local variable in this segment
+                        self.Reg[r1] = 'used', forth, False
+                    else:
+                        self.use_register(r1, forth, ForWrite)
 
         if first == 'INT_TO_CHAR':
             # forth bude vzdy nova temporalni promena
@@ -698,7 +727,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             label_name = forth + str(self.pc)
             self.gen(label_name + ':')
             self.gen('.space '+str(2))  # allocate buffer has only one symbol + null_term
-            self.AddressTable[len(self.AddressTable)] = 1, ('28', None), None, label_name
+            self.AddressTable.append(( 1, ('28', None), None, label_name))
             self.change_segment_type_to_text()
             r = self.getreg(label_name, ForRead)
             s = self.getreg(second, ForRead, [r])
@@ -742,15 +771,15 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
             label_name = forth + str(self.pc)
             self.gen(label_name + ':')
             self.gen('.space '+str(self.buffer_size))  # allocate buffer
-            self.AddressTable[len(self.AddressTable)] = self.buffer_size, ('28', None), None, label_name
+            self.AddressTable.append((self.buffer_size, ('28', None), None, label_name))
             self.change_segment_type_to_text()
             r = self.getreg(label_name, ForRead)
             s = self.find_free_register([r])
             self.gen('READ_STRING $' + r+',$'+s)
             self.gen('subu $29, $29, 4')                        # decrement sp to make space for local variable
             self.gen('sw $' + r + ',4($29)')                    # save address of the string_variable in stack
-            self.AddressTable[len(self.AddressTable)] = self.buffer_size, (
-                '30', self.foffset), r, forth               # save information in TA about variable
+            self.AddressTable.append((self.buffer_size, (
+                '30', self.foffset), r, forth))               # save information in TA about variable
             self.foffset += 4                   # calculate offset of the next local variable in this segment
             self.Reg[r] = 'used', forth, False
         if second == 'get_at':
@@ -776,7 +805,7 @@ class CodeGenerator:                        # type , Varname , isDifferentFromMe
                 self.change_segment_type_to_data()
                 self.gen(label_name + ':')
                 self.gen('.space '+str(self.buffer_size))  # allocate buffer
-                self.AddressTable[len(self.AddressTable)] = self.buffer_size, ('28', None), None, label_name
+                self.AddressTable.append((self.buffer_size, ('28', None), None, label_name))
                 self.change_segment_type_to_text()
                 self.strcpy(label_name, curr_param_list[2][3])          # curr_param_list[2][3] is a pointer to string
                 r = self.getreg(forth, ForWrite)                        # pointer to a copy of string
